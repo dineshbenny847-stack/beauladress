@@ -6,59 +6,47 @@
   <title>Checkout — Beau L'adresses</title>
   <link rel="stylesheet" href="css/style.css"/>
   <style>
-    .payment-section { display: none !important; }
-    .payment-section.active { display: block !important; }
+    /* Payment sections — hidden by default, shown when active */
+    .pay-section { display: none; margin-top: 16px; }
+    .pay-section.show { display: block; }
 
-    /* Payment method cards */
     .payment-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 8px; }
-    .pay-card { border: 2px solid var(--gray-light); border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all .2s; }
+    .pay-card { border: 2px solid #e5e5e5; border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all .2s; background: #fff; }
     .pay-card:hover { border-color: #0d0d0d; }
-    .pay-card.selected { border-color: #0d0d0d; background: #f9f9f9; }
-    .pay-card .pay-icon { font-size: 1.8rem; margin-bottom: 6px; }
-    .pay-card .pay-label { font-size: .82rem; font-weight: 700; }
+    .pay-card.active-card { border-color: #0d0d0d; background: #f5f5f5; }
+    .pay-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .pay-label { font-size: .82rem; font-weight: 700; }
 
-    /* UPI box */
-    .upi-box { background: #f9f9f9; border: 2px solid #e5e5e5; border-radius: 16px; padding: 28px 24px; text-align: center; margin-top: 16px; }
-    .upi-id-display { font-size: 1.15rem; font-weight: 800; background: #fff; border: 2px dashed #c9848a; border-radius: 10px; padding: 12px 20px; margin: 12px auto; display: inline-block; letter-spacing: .5px; }
-    .upi-apps { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
-    .upi-app-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 16px; background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; font-size: .78rem; font-weight: 700; cursor: pointer; transition: all .2s; text-decoration: none; color: #0d0d0d; }
-    .upi-app-btn:hover { border-color: #0d0d0d; transform: translateY(-2px); }
-    .upi-app-btn .app-icon { font-size: 1.6rem; }
-    .copy-btn { background: #0d0d0d; color: #fff; border: none; padding: 9px 20px; border-radius: 50px; font-size: .85rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .upi-box { background: #f9f9f9; border: 2px solid #e5e5e5; border-radius: 16px; padding: 28px 20px; text-align: center; }
+    .upi-id-chip { font-size: 1.1rem; font-weight: 800; background: #fff; border: 2px dashed #c9848a; border-radius: 10px; padding: 10px 20px; display: inline-block; margin: 10px 0; letter-spacing: .5px; }
+    .copy-btn { background: #0d0d0d; color: #fff; border: none; padding: 9px 22px; border-radius: 50px; font-size: .85rem; font-weight: 700; cursor: pointer; margin-top: 6px; }
     .copy-btn:hover { background: #333; }
+    .qr-box { background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; padding: 14px; display: inline-block; margin: 14px auto; }
+    .qr-box img { width: 180px; height: 180px; display: block; }
+    .upi-apps { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 14px 0 4px; }
+    .upi-app { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 14px; background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; font-size: .76rem; font-weight: 700; text-decoration: none; color: #0d0d0d; transition: all .2s; }
+    .upi-app:hover { border-color: #0d0d0d; transform: translateY(-2px); }
+    .upi-app span { font-size: 1.5rem; }
 
-    /* QR code box */
-    .qr-wrap { background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; padding: 16px; display: inline-block; margin: 12px auto; }
-    .qr-wrap img { width: 180px; height: 180px; display: block; }
+    .txn-box { margin-top: 14px; background: #fefce8; border: 2px solid #fde047; border-radius: 12px; padding: 16px; }
+    .txn-box label { font-weight: 700; font-size: .88rem; display: block; margin-bottom: 8px; }
+    .txn-box input { width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: .92rem; }
+    .txn-box p { font-size: .78rem; color: #888; margin-top: 6px; }
 
-    /* COD box */
-    .cod-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 16px; padding: 24px; text-align: center; margin-top: 16px; }
-    .cod-box .cod-icon { font-size: 2.5rem; margin-bottom: 8px; }
-    .cod-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .cod-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 16px; padding: 28px; text-align: center; }
+    .cod-box .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .cod-box h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
     .cod-box p { color: #555; font-size: .88rem; line-height: 1.6; }
 
-    /* Card box */
-    .card-box { background: #eff6ff; border: 2px solid #93c5fd; border-radius: 16px; padding: 24px; text-align: center; margin-top: 16px; }
-    .card-box .card-icon { font-size: 2.5rem; margin-bottom: 8px; }
-    .card-box h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
-    .card-box p { color: #555; font-size: .88rem; line-height: 1.6; }
-    .card-box a { color: #2563eb; font-weight: 700; }
-
-    /* UPI paid confirm */
-    .upi-paid-section { display:none; margin-top: 16px; background: #fefce8; border: 2px solid #fde047; border-radius: 14px; padding: 20px; }
-    .upi-paid-section.show { display: block; }
-    .upi-paid-section label { font-weight: 700; font-size: .88rem; display: block; margin-bottom: 8px; }
-    .upi-paid-section input { width: 100%; padding: 11px 14px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: .95rem; }
-    .upi-paid-section p { font-size: .8rem; color: #888; margin-top: 6px; }
-
-    @media(max-width:480px) {
-      .payment-options { grid-template-columns: repeat(3,1fr); }
-      .upi-apps { gap: 8px; }
-      .upi-app-btn { padding: 10px 10px; font-size: .72rem; }
-    }
+    .netcard-box { background: #eff6ff; border: 2px solid #93c5fd; border-radius: 16px; padding: 28px; text-align: center; }
+    .netcard-box .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .netcard-box h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .netcard-box p { color: #555; font-size: .88rem; line-height: 1.6; }
+    .netcard-box a { color: #2563eb; font-weight: 700; text-decoration: none; }
   </style>
 </head>
 <body>
+
 <nav class="navbar">
   <div class="container nav-inner">
     <a href="index.html" class="nav-logo">Beau <span>L'adresses</span></a>
@@ -68,7 +56,7 @@
 
 <div class="checkout-wrap">
   <h1>Checkout</h1>
-  <p style="color:#888;margin-bottom:28px;">Almost there! Complete your order below.</p>
+  <p style="color:#888;margin-bottom:28px;">Almost there! Fill in your details below.</p>
 
   <!-- Order Summary -->
   <div class="order-summary-box">
@@ -81,8 +69,9 @@
   </div>
 
   <form id="checkoutForm" onsubmit="handleCheckout(event)">
+
     <!-- Delivery Details -->
-    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;">Delivery Details</h3>
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;margin-top:8px;">Delivery Details</h3>
     <div class="form-group">
       <label>Full Name *</label>
       <input type="text" name="name" required placeholder="Your full name"/>
@@ -115,105 +104,94 @@
     </div>
 
     <!-- Payment Method -->
-    <div class="form-group" style="margin-top:28px;">
-      <label style="font-weight:700;font-size:1rem;margin-bottom:12px;display:block;">Choose Payment Method</label>
-      <div class="payment-options" id="paymentOptions">
-        <div class="pay-card selected" id="pay-upi" onclick="selectPayment('upi')">
+    <div style="margin-top:28px;">
+      <p style="font-weight:700;font-size:1rem;margin-bottom:12px;">Choose Payment Method</p>
+      <div class="payment-options">
+        <div class="pay-card active-card" id="btn-upi" onclick="switchPay('upi')">
           <div class="pay-icon">📱</div>
           <div class="pay-label">UPI / QR</div>
         </div>
-        <div class="pay-card" id="pay-cod" onclick="selectPayment('cod')">
+        <div class="pay-card" id="btn-cod" onclick="switchPay('cod')">
           <div class="pay-icon">💵</div>
           <div class="pay-label">Cash on Delivery</div>
         </div>
-        <div class="pay-card" id="pay-card" onclick="selectPayment('card')">
+        <div class="pay-card" id="btn-net" onclick="switchPay('net')">
           <div class="pay-icon">💳</div>
           <div class="pay-label">Card / Net Banking</div>
         </div>
       </div>
-      <input type="hidden" name="payment" id="paymentInput" value="upi"/>
+      <input type="hidden" id="payMethod" name="payment" value="upi"/>
     </div>
 
-    <!-- UPI Payment Section -->
-    <div class="payment-section active" id="section-upi">
+    <!-- ── UPI Section ── -->
+    <div class="pay-section show" id="sec-upi">
       <div class="upi-box">
-        <p style="font-size:.85rem;color:#555;margin-bottom:4px;">Pay to UPI ID</p>
-        <div class="upi-id-display" id="upiIdDisplay">6281807448-2@ibl</div>
-        <br/>
+        <p style="font-size:.85rem;color:#666;margin-bottom:4px;">Pay to UPI ID</p>
+        <div class="upi-id-chip">6281807448-2@ibl</div><br/>
         <button type="button" class="copy-btn" onclick="copyUPI()">📋 Copy UPI ID</button>
 
-        <div style="margin:20px 0;border-top:1px solid #e5e5e5;padding-top:20px;">
-          <p style="font-size:.85rem;color:#555;margin-bottom:12px;">Or scan QR code</p>
-          <div class="qr-wrap">
-            <!-- QR code generated from UPI ID using a free QR API -->
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=6281807448-2@ibl%26pn=Beau%20Ladresses%26cu=INR" alt="UPI QR Code"/>
+        <div style="margin:20px 0 12px;border-top:1px solid #e5e5e5;padding-top:18px;">
+          <p style="font-size:.83rem;color:#666;margin-bottom:10px;">Scan QR Code with any UPI app</p>
+          <div class="qr-box">
+            <img id="qrImg" src="" alt="UPI QR Code"/>
           </div>
-          <p style="font-size:.75rem;color:#888;margin-top:8px;">Scan with any UPI app</p>
+          <p style="font-size:.74rem;color:#aaa;margin-top:6px;">Amount auto-filled when scanned</p>
         </div>
 
-        <div>
-          <p style="font-size:.85rem;color:#555;margin-bottom:10px;">Open your UPI app directly</p>
+        <div style="border-top:1px solid #e5e5e5;padding-top:16px;">
+          <p style="font-size:.83rem;color:#666;margin-bottom:10px;">Or tap to open your UPI app</p>
           <div class="upi-apps">
-            <a class="upi-app-btn" href="gpay://upi/pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="gpayLink">
-              <span class="app-icon">🟢</span>Google Pay
-            </a>
-            <a class="upi-app-btn" href="phonepe://pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="phonepeLink">
-              <span class="app-icon">🟣</span>PhonePe
-            </a>
-            <a class="upi-app-btn" href="paytmmp://pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="paytmLink">
-              <span class="app-icon">🔵</span>Paytm
-            </a>
-            <a class="upi-app-btn" href="upi://pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="bhimLink">
-              <span class="app-icon">🇮🇳</span>BHIM
-            </a>
+            <a class="upi-app" id="lnk-gpay" href="#"><span>🟢</span>Google Pay</a>
+            <a class="upi-app" id="lnk-phonepe" href="#"><span>🟣</span>PhonePe</a>
+            <a class="upi-app" id="lnk-paytm" href="#"><span>🔵</span>Paytm</a>
+            <a class="upi-app" id="lnk-bhim" href="#"><span>🇮🇳</span>BHIM</a>
           </div>
         </div>
       </div>
 
-      <!-- After payment confirmation -->
-      <div class="upi-paid-section show" id="upiPaidSection">
-        <label>✅ After paying, enter your UPI Transaction ID</label>
-        <input type="text" id="upiTxnId" name="upiTxnId" placeholder="e.g. 407223819345 (from your UPI app)"/>
-        <p>⚠️ Your order will be confirmed after we verify the payment.</p>
+      <div class="txn-box">
+        <label>✅ After paying, enter your UPI Transaction ID (UTR)</label>
+        <input type="text" id="upiTxnId" placeholder="e.g. 407223819345"/>
+        <p>⚠️ Your order is confirmed after we verify this payment.</p>
       </div>
     </div>
 
-    <!-- COD Section -->
-    <div class="payment-section" id="section-cod">
+    <!-- ── COD Section ── -->
+    <div class="pay-section" id="sec-cod">
       <div class="cod-box">
-        <div class="cod-icon">💵</div>
+        <div class="icon">💵</div>
         <h3>Cash on Delivery</h3>
-        <p>Pay in cash when your order arrives at your doorstep. No advance payment needed.</p>
-        <p style="margin-top:8px;font-size:.8rem;color:#16a34a;font-weight:600;">✅ Available across India</p>
+        <p>Pay in cash when your order arrives at your doorstep.<br/>No advance payment needed.</p>
+        <p style="margin-top:10px;font-size:.82rem;color:#16a34a;font-weight:600;">✅ Available across India</p>
       </div>
     </div>
 
-    <!-- Card / Net Banking Section -->
-    <div class="payment-section" id="section-card">
-      <div class="card-box">
-        <div class="card-icon">💳</div>
+    <!-- ── Card / Net Banking Section ── -->
+    <div class="pay-section" id="sec-net">
+      <div class="netcard-box">
+        <div class="icon">💳</div>
         <h3>Card / Net Banking</h3>
-        <p>We are integrating Razorpay for secure card payments. For now please use <strong>UPI</strong> or <strong>Cash on Delivery</strong>.</p>
-        <p style="margin-top:12px;font-size:.82rem;">
-          Or pay via UPI — <a href="#" onclick="selectPaymentByName('upi')">Switch to UPI →</a>
+        <p>Secure card payments coming soon via Razorpay.<br/>For now, please use <strong>UPI</strong> or <strong>Cash on Delivery</strong>.</p>
+        <p style="margin-top:12px;font-size:.84rem;">
+          <a href="#" onclick="switchPay('upi');return false;">← Switch to UPI instead</a>
         </p>
       </div>
     </div>
 
-    <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:1.05rem;border-radius:50px;margin-top:24px;" id="placeOrderBtn">
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:1.05rem;border-radius:50px;margin-top:24px;">
       ✅ Place Order →
     </button>
   </form>
 </div>
 
-<!-- Order Confirmation Modal -->
+<!-- Confirmation Modal -->
 <div class="modal-overlay" id="confirmModal">
   <div class="modal-box" style="grid-template-columns:1fr;max-width:480px;text-align:center;padding:48px 40px;border-radius:20px;">
-    <div style="font-size:3rem;margin-bottom:16px;" id="confirmEmoji">🎉</div>
+    <div style="font-size:3rem;margin-bottom:16px;">🎉</div>
     <h2 style="font-size:1.6rem;font-weight:800;margin-bottom:8px;">Order Placed!</h2>
-    <p style="color:#888;margin-bottom:8px;" id="confirmMsg">Your order has been confirmed.</p>
-    <p id="confirmOrderId" style="font-weight:700;color:#0d0d0d;margin-bottom:8px;"></p>
-    <p id="confirmPayNote" style="font-size:.85rem;color:#c9848a;margin-bottom:24px;"></p>
+    <p style="color:#888;margin-bottom:8px;" id="confirmMsg"></p>
+    <p id="confirmOrderId" style="font-weight:700;color:#0d0d0d;margin-bottom:8px;font-size:.95rem;"></p>
+    <p id="confirmPayNote" style="font-size:.84rem;color:#c9848a;margin-bottom:24px;"></p>
     <a href="index.html" class="btn btn-primary" style="margin:0 auto;">Continue Shopping →</a>
   </div>
 </div>
@@ -221,104 +199,89 @@
 <div class="toast" id="toast"></div>
 <script src="js/data.js"></script>
 <script>
-  let selectedPaymentMethod = 'upi';
+  var currentPay = 'upi';
+  var UPI_ID = '6281807448-2@ibl';
+  var STORE_NAME = 'BeauLadresses';
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const cart = getCart();
-    const db = getDB();
+  document.addEventListener('DOMContentLoaded', function() {
+    var cart = getCart();
     if (!cart.length) { window.location.href = 'index.html'; return; }
 
-    const itemsDiv = document.getElementById('checkoutItems');
-    itemsDiv.innerHTML = cart.map(item => {
-      const p = db.products.find(x => x.id === item.productId);
-      return p ? `<div class="order-line"><span>${p.name} (${item.size}) x${item.qty}</span><span>${formatPrice(p.price * item.qty)}</span></div>` : '';
-    }).join('');
+    var db = getDB();
+    var html = '';
+    cart.forEach(function(item) {
+      var p = db.products.find(function(x){ return x.id === item.productId; });
+      if (p) html += '<div class="order-line"><span>' + p.name + ' (' + item.size + ') x' + item.qty + '</span><span>' + formatPrice(p.price * item.qty) + '</span></div>';
+    });
+    document.getElementById('checkoutItems').innerHTML = html;
 
-    const total = getCartTotal();
+    var total = getCartTotal();
     document.getElementById('checkoutTotal').textContent = formatPrice(total);
 
-    // Update UPI links with actual amount
-    const amt = (total / 100).toFixed(2);
-    const upiBase = '6281807448-2@ibl';
-    const name = 'BeauLadresses';
-    document.getElementById('gpayLink').href    = `gpay://upi/pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
-    document.getElementById('phonepeLink').href = `phonepe://pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
-    document.getElementById('paytmLink').href   = `paytmmp://pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
-    document.getElementById('bhimLink').href    = `upi://pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
-
-    // Update QR with amount
-    document.querySelector('.qr-wrap img').src =
-      `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=${upiBase}%26pn=${name}%26am=${amt}%26cu=INR`;
+    // Set UPI links with amount
+    var amt = (total / 100).toFixed(2);
+    var enc = encodeURIComponent;
+    document.getElementById('qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + enc('upi://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR');
+    document.getElementById('lnk-gpay').href    = 'gpay://upi/pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    document.getElementById('lnk-phonepe').href = 'phonepe://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    document.getElementById('lnk-paytm').href   = 'paytmmp://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    document.getElementById('lnk-bhim').href    = 'upi://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
   });
 
-  function selectPayment(method) {
-    selectedPaymentMethod = method;
-    document.getElementById('paymentInput').value = method;
-    // update card highlight
-    document.querySelectorAll('.pay-card').forEach(c => c.classList.remove('selected'));
-    document.getElementById('pay-' + method).classList.add('selected');
-    // show correct section
-    document.querySelectorAll('.payment-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('section-' + method).classList.add('active');
-  }
+  function switchPay(method) {
+    currentPay = method;
+    document.getElementById('payMethod').value = method;
 
-  function selectPaymentByName(method) {
-    selectPayment(method);
+    // Reset all cards
+    document.getElementById('btn-upi').classList.remove('active-card');
+    document.getElementById('btn-cod').classList.remove('active-card');
+    document.getElementById('btn-net').classList.remove('active-card');
+    document.getElementById('btn-' + (method === 'net' ? 'net' : method)).classList.add('active-card');
+
+    // Hide all sections
+    document.getElementById('sec-upi').classList.remove('show');
+    document.getElementById('sec-cod').classList.remove('show');
+    document.getElementById('sec-net').classList.remove('show');
+    // Show selected
+    document.getElementById('sec-' + method).classList.add('show');
   }
 
   function copyUPI() {
-    navigator.clipboard.writeText('6281807448-2@ibl').then(() => {
+    var txt = UPI_ID;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(txt).then(function(){ showToast('✅ UPI ID copied!'); });
+    } else {
+      var el = document.createElement('textarea');
+      el.value = txt; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el);
       showToast('✅ UPI ID copied!');
-    }).catch(() => {
-      // fallback
-      const el = document.createElement('textarea');
-      el.value = '6281807448-2@ibl';
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      showToast('✅ UPI ID copied!');
-    });
+    }
   }
 
   function handleCheckout(e) {
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const info = Object.fromEntries(fd.entries());
-
-    // Validate UPI txn ID if UPI selected
-    if (selectedPaymentMethod === 'upi') {
-      const txn = document.getElementById('upiTxnId').value.trim();
-      if (!txn) {
-        showToast('⚠️ Please enter your UPI Transaction ID after paying.');
-        document.getElementById('upiTxnId').focus();
-        return;
-      }
-      info.upiTxnId = txn;
+    if (currentPay === 'upi') {
+      var txn = document.getElementById('upiTxnId').value.trim();
+      if (!txn) { showToast('⚠️ Please enter your UPI Transaction ID after paying.'); document.getElementById('upiTxnId').focus(); return; }
     }
-
-    info.paymentMethod = selectedPaymentMethod;
-    const order = placeOrder(info);
-
-    // Show confirmation
-    const emoji = { upi: '🎉', cod: '🎉', card: '🎉' };
-    const note = {
-      upi: '💳 UPI payment received. We will confirm your order shortly.',
-      cod: '💵 Pay cash when your order arrives.',
-      card: ''
-    };
-    document.getElementById('confirmEmoji').textContent = '🎉';
+    var fd = new FormData(e.target);
+    var info = {};
+    fd.forEach(function(v, k){ info[k] = v; });
+    if (currentPay === 'upi') info.upiTxnId = document.getElementById('upiTxnId').value.trim();
+    info.paymentMethod = currentPay;
+    var order = placeOrder(info);
+    var notes = { upi: '💳 UPI payment received. We will verify and confirm your order.', cod: '💵 Pay cash when your order arrives at your door.', net: '' };
+    document.getElementById('confirmMsg').textContent = 'Your order has been placed successfully!';
     document.getElementById('confirmOrderId').textContent = 'Order ID: ' + order.id;
-    document.getElementById('confirmPayNote').textContent = note[selectedPaymentMethod] || '';
+    document.getElementById('confirmPayNote').textContent = notes[currentPay] || '';
     document.getElementById('confirmModal').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
   function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
   }
 </script>
 </body>
