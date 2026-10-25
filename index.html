@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Beau L'adresses</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#fdf2f4 0%,#f0e8ff 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    .wrap{text-align:center;padding:40px 24px;}
+    .logo{font-size:2.5rem;font-weight:800;letter-spacing:-1px;margin-bottom:8px;}
+    .logo span{color:#c9848a;}
+    .tagline{color:#6b7280;font-size:1rem;margin-bottom:48px;}
+    .cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;}
+    .card{background:#fff;border-radius:20px;padding:40px 36px;width:260px;box-shadow:0 4px 24px rgba(0,0,0,.1);text-decoration:none;color:#0d0d0d;transition:transform .2s;}
+    .card:hover{transform:translateY(-6px);}
+    .card-icon{font-size:2.8rem;margin-bottom:16px;}
+    .card h2{font-size:1.2rem;font-weight:800;margin-bottom:8px;}
+    .card p{font-size:.85rem;color:#6b7280;line-height:1.6;}
+    .card-badge{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:50px;font-size:.82rem;font-weight:700;}
+    .shop-badge{background:#0d0d0d;color:#fff;}
+    .admin-badge{background:#e8b4b8;color:#0d0d0d;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">Beau <span>L'adresses</span></div>
+    <p class="tagline">Curated fashion for the modern woman.</p>
+    <div class="cards">
+      <a href="store/index.html" class="card">
+        <div class="card-icon">🛍️</div>
+        <h2>Customer Store</h2>
+        <p>Browse collections, shop your favourite looks, and place orders.</p>
+        <div class="card-badge shop-badge">Enter Store →</div>
+      </a>
+      <a href="admin/index.html" class="card">
+        <div class="card-icon">⚙️</div>
+        <h2>Admin Portal</h2>
+        <p>Manage collections, products, stock levels, and view orders.</p>
+        <div class="card-badge admin-badge">Admin Login →</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

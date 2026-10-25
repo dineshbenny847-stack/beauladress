@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Portal — Beau L'adresses</title>
+  <link rel="stylesheet" href="css/admin.css"/>
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN ═════════════════════════════════════════════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Beau <span>L'adresses</span></div>
+    <div class="login-sub">Admin Portal · Secure Access</div>
+    <h2>Sign In</h2>
+    <div class="form-row">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="admin" value="admin"/>
+    </div>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn-login" onclick="doLogin()">Sign In →</button>
+    <p class="login-err" id="loginErr">❌ Invalid credentials. Try again.</p>
+    <p style="margin-top:20px;font-size:.78rem;color:#aaa;">Demo: admin / admin123</p>
+  </div>
+</div>
+
+<!-- ═══ ADMIN LAYOUT ══════════════════════════════════════════════ -->
+<div class="admin-layout" id="adminLayout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="text">Beau <span>L'adresses</span></span>
+      <span class="admin-badge text">Admin Portal</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-panel="dashboard" onclick="switchPanel('dashboard',this)">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </div>
+      <div class="nav-item" data-panel="collections" onclick="switchPanel('collections',this)">
+        <span class="nav-icon">🗂️</span><span>Collections</span>
+      </div>
+      <div class="nav-item" data-panel="products" onclick="switchPanel('products',this)">
+        <span class="nav-icon">👗</span><span>Products</span>
+      </div>
+      <div class="nav-item" data-panel="stock" onclick="switchPanel('stock',this)">
+        <span class="nav-icon">📦</span><span>Stock Manager</span>
+      </div>
+      <div class="nav-item" data-panel="orders" onclick="switchPanel('orders',this)">
+        <span class="nav-icon">🧾</span><span>Orders</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="../store/index.html" target="_blank"><span>🛍️</span><span class="text"> View Store</span></a>
+      <br/><br/>
+      <a href="#" onclick="doLogout()"><span>🚪</span><span class="text"> Log Out</span></a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="section-panel active" id="panel-dashboard">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Welcome back! Here's what's happening today.</p>
+        </div>
+        <span id="dashDate" style="font-size:.85rem;color:#888;"></span>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <div class="card">
+          <div class="card-header"><h2>Recent Orders</h2></div>
+          <div class="card-body" id="recentOrdersList"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Low / Out of Stock Alert</h2></div>
+          <div class="card-body" id="lowStockList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COLLECTIONS ── -->
+    <div class="section-panel" id="panel-collections">
+      <div class="page-header">
+        <div>
+          <h1>Collections</h1>
+          <p>Manage your curated collections.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAddCollectionModal()">+ New Collection</button>
+      </div>
+      <div class="col-grid" id="collectionsAdminGrid"></div>
+    </div>
+
+    <!-- ── PRODUCTS ── -->
+    <div class="section-panel" id="panel-products">
+      <div class="page-header">
+        <div>
+          <h1>Products</h1>
+          <p>Manage all items in your store.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAddProductModal()">+ Add Product</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h2>All Products</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="productFilterCol" onchange="renderProductsTable()" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;">
+              <option value="all">All Collections</option>
+            </select>
+            <input type="text" id="productSearch" oninput="renderProductsTable()" placeholder="Search…" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;width:160px;"/>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr>
+              <th>Image</th><th>Name</th><th>Collection</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="productsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STOCK MANAGER ── -->
+    <div class="section-panel" id="panel-stock">
+      <div class="page-header">
+        <div>
+          <h1>Stock Manager</h1>
+          <p>Update stock levels or remove out-of-stock items.</p>
+        </div>
+        <button class="btn btn-danger" onclick="removeAllOutOfStock()">🗑 Remove All Out-of-Stock</button>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><h2>⚠️ Out of Stock Items</h2></div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr><th>Image</th><th>Name</th><th>Collection</th><th>Price</th><th>Action</th></tr></thead>
+            <tbody id="oosTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>All Stock Levels</h2></div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr><th>Name</th><th>Collection</th><th>Stock</th><th>Status</th><th>Update</th></tr></thead>
+            <tbody id="stockTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ORDERS ── -->
+    <div class="section-panel" id="panel-orders">
+      <div class="page-header">
+        <div><h1>Orders</h1><p>View all customer orders.</p></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Order History</h2></div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ MODALS ════════════════════════════════════════════════════ -->
+
+<!-- Add/Edit Collection Modal -->
+<div class="modal-backdrop" id="collectionModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3 id="colModalTitle">New Collection</h3>
+      <button onclick="closeModal('collectionModal')" style="font-size:1.4rem;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="colId"/>
+      <div class="fld"><label>Collection Name *</label><input type="text" id="colName" placeholder="e.g. Winter Warmth"/></div>
+      <div class="fld"><label>Description *</label><textarea id="colDesc" placeholder="Brief description of this collection…"></textarea></div>
+      <div class="fld"><label>Cover Image URL *</label><input type="url" id="colImg" placeholder="https://images.unsplash.com/…"/></div>
+      <div id="colImgPreview" style="margin-top:8px;display:none;"><img style="width:100%;height:160px;object-fit:cover;border-radius:8px;" id="colImgPreviewImg"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('collectionModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCollection()">Save Collection</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Product Modal -->
+<div class="modal-backdrop" id="productModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3 id="prodModalTitle">Add Product</h3>
+      <button onclick="closeModal('productModal')" style="font-size:1.4rem;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="prodId"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="fld"><label>Product Name *</label><input type="text" id="prodName"/></div>
+        <div class="fld"><label>Collection *</label><select id="prodCollection"></select></div>
+      </div>
+      <div class="fld"><label>Description</label><textarea id="prodDesc"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="fld"><label>Price (₹) *</label><input type="number" id="prodPrice" placeholder="e.g. 2999"/></div>
+        <div class="fld"><label>Stock Qty *</label><input type="number" id="prodStock" placeholder="e.g. 10"/></div>
+      </div>
+      <div class="fld"><label>Image URL *</label><input type="url" id="prodImg" placeholder="https://…" oninput="previewProdImg()"/></div>
+      <div id="prodImgPreview" style="display:none;margin-top:4px;"><img id="prodImgPreviewImg" style="width:100%;height:140px;object-fit:cover;border-radius:8px;"/></div>
+      <div class="fld"><label>Available Sizes (comma-separated)</label><input type="text" id="prodSizes" placeholder="XS,S,M,L,XL"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('productModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal-panel" style="max-width:420px;">
+    <div class="modal-head"><h3 id="confirmTitle">Confirm Action</h3><button onclick="closeModal('confirmModal')" style="font-size:1.4rem;">✕</button></div>
+    <div class="modal-body"><p id="confirmMsg" style="color:#555;font-size:.95rem;line-height:1.6;"></p></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn btn-danger" id="confirmActionBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="adminToast"></div>
+
+<script src="../store/js/data.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
