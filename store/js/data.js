@@ -110,12 +110,17 @@ function getCartTotal() {
 function placeOrder(customerInfo) {
   const db = getDB();
   const currentUser = getCurrentUser();
+  // If user is logged in, make sure their email is on the order for matching
+  if (currentUser && !customerInfo.email) {
+    customerInfo.email = currentUser.email;
+  }
   const order = {
     id: 'ORD' + Date.now(),
     items: db.cart.map(i => ({ ...i })),
     total: getCartTotal(),
     customer: customerInfo,
     userId: currentUser ? currentUser.id : null,
+    userEmail: currentUser ? currentUser.email : (customerInfo.email || null),
     status: 'Confirmed',
     date: new Date().toISOString()
   };
