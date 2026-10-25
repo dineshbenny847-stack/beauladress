@@ -813,25 +813,62 @@ function renderSettings() {
   const db = getDB();
   const s = db.settings || {};
 
+  const storeName = s.storeName  || "Beau L'adresses";
+  const tagline   = s.tagline    || 'Curated fashion for the modern woman';
+  const email     = s.email      || 'hello@beauladresses.com';
+  const phone     = s.phone      || '';
+  const city      = s.city       || 'Mumbai, India';
+  const upiId     = s.upiId      || '6281807448-2@ibl';
+  const upiName   = s.upiName    || 'BeauLadresses';
+
   // Fill in form fields
-  document.getElementById('setStoreName').value  = s.storeName  || "Beau L'adresses";
-  document.getElementById('setTagline').value    = s.tagline    || 'Curated fashion for the modern woman';
-  document.getElementById('setEmail').value      = s.email      || 'hello@beauladresses.com';
-  document.getElementById('setPhone').value      = s.phone      || '';
-  document.getElementById('setCity').value       = s.city       || 'Mumbai, India';
-  document.getElementById('setUpiId').value      = s.upiId      || '6281807448-2@ibl';
-  document.getElementById('setUpiName').value    = s.upiName    || 'BeauLadresses';
+  document.getElementById('setStoreName').value = storeName;
+  document.getElementById('setTagline').value   = tagline;
+  document.getElementById('setEmail').value     = email;
+  document.getElementById('setPhone').value     = phone;
+  document.getElementById('setCity').value      = city;
+  document.getElementById('setUpiId').value     = upiId;
+  document.getElementById('setUpiName').value   = upiName;
+
+  // Populate live preview bar
+  document.getElementById('previewStoreName').textContent  = storeName;
+  document.getElementById('previewTagline').textContent    = tagline;
+  document.getElementById('settingsUpiDisplay').textContent = upiId;
+  document.getElementById('previewPhone').textContent      = phone || '—';
+  document.getElementById('currentUpiChip').textContent    = upiId;
 
   // QR preview
-  updateSettingsQR(s.upiId || '6281807448-2@ibl', s.upiName || 'BeauLadresses');
+  updateSettingsQR(upiId, upiName);
 
-  // Live update QR as user types
-  document.getElementById('setUpiId').oninput = function() {
-    updateSettingsQR(this.value, document.getElementById('setUpiName').value);
-  };
+  // Password strength meter wire-up
+  const pwdNewEl = document.getElementById('setPwdNew');
+  if (pwdNewEl) pwdNewEl.oninput = function() { checkPwdStrength(this.value); };
 
   // Low stock banner in settings
   renderLowStockBanner('settingsLowStockBanner', db);
+}
+
+function livePreviewStore() {
+  const name = document.getElementById('setStoreName')?.value || '—';
+  const tag  = document.getElementById('setTagline')?.value   || '';
+  document.getElementById('previewStoreName').textContent = name;
+  document.getElementById('previewTagline').textContent   = tag;
+}
+
+function checkPwdStrength(val) {
+  let score = 0;
+  if (val.length >= 6)  score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const pct   = (score / 5) * 100;
+  const color = score <= 1 ? '#ef4444' : score <= 3 ? '#f59e0b' : '#16a34a';
+  const label = score <= 1 ? 'Weak' : score <= 3 ? 'Medium' : 'Strong';
+  const fill  = document.getElementById('pwdStrengthFill');
+  const lbl   = document.getElementById('pwdStrengthLabel');
+  if (fill) { fill.style.width = pct + '%'; fill.style.background = color; }
+  if (lbl)  { lbl.textContent = val ? 'Strength: ' + label : ''; lbl.style.color = color; }
 }
 
 function updateSettingsQR(upiId, name) {
@@ -856,6 +893,11 @@ function saveStoreSettings() {
     db.settings.phone     = phone;
     db.settings.city      = city;
   });
+  // Refresh the live preview bar to show what's now saved
+  document.getElementById('previewStoreName').textContent = name;
+  document.getElementById('previewTagline').textContent   = tag;
+  document.getElementById('previewPhone').textContent     = phone || '—';
+  showSettingsSavedBadge('storeInfoSavedBadge');
   showAdminToast('✅ Store information saved!');
 }
 
@@ -869,7 +911,19 @@ function savePaymentSettings() {
     db.settings.upiName = upiName;
   });
   updateSettingsQR(upiId, upiName);
-  showAdminToast('✅ Payment settings saved! Remember to update checkout.html with new UPI ID.');
+  // Update all displays to confirm what was saved
+  document.getElementById('settingsUpiDisplay').textContent = upiId;
+  document.getElementById('currentUpiChip').textContent     = upiId;
+  document.getElementById('setUpiId').value                 = upiId; // clear back to show saved value
+  showSettingsSavedBadge('paymentSavedBadge');
+  showAdminToast('✅ UPI ID updated to: ' + upiId);
+}
+
+function showSettingsSavedBadge(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.style.display = 'inline-flex';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
 function changePassword() {
@@ -877,14 +931,24 @@ function changePassword() {
   const newPwd  = document.getElementById('setPwdNew').value;
   const confirm = document.getElementById('setPwdConfirm').value;
   const db = getDB();
-  if (current !== db.adminPassword) { showAdminToast('❌ Current password is incorrect.', true); return; }
-  if (newPwd.length < 6) { showAdminToast('❌ New password must be at least 6 characters.', true); return; }
-  if (newPwd !== confirm) { showAdminToast('❌ Passwords do not match.', true); return; }
+  const errEl = document.getElementById('pwdErrMsg');
+  const okEl  = document.getElementById('pwdOkMsg');
+  const showErr = (msg) => { errEl.textContent = '❌ ' + msg; errEl.style.display='block'; okEl.style.display='none'; };
+  const showOk  = ()    => { okEl.style.display='block'; errEl.style.display='none'; };
+
+  if (!current)             { showErr('Enter your current password.'); return; }
+  if (current !== db.adminPassword) { showErr('Current password is incorrect.'); return; }
+  if (newPwd.length < 6)    { showErr('New password must be at least 6 characters.'); return; }
+  if (newPwd !== confirm)   { showErr('Passwords do not match.'); return; }
+
   updateDB(d => { d.adminPassword = newPwd; });
   document.getElementById('setPwdCurrent').value = '';
   document.getElementById('setPwdNew').value = '';
   document.getElementById('setPwdConfirm').value = '';
+  checkPwdStrength('');
+  showOk();
   showAdminToast('✅ Password changed successfully!');
+  setTimeout(() => { if(okEl) okEl.style.display='none'; }, 4000);
 }
 
 function confirmClearOrders() {

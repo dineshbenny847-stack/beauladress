@@ -141,7 +141,7 @@
     <div class="pay-section show" id="sec-upi">
       <div class="upi-box">
         <p style="font-size:.85rem;color:#666;margin-bottom:4px;">Pay to UPI ID</p>
-        <div class="upi-id-chip">6281807448-2@ibl</div><br/>
+        <div class="upi-id-chip" id="checkoutUpiChip">6281807448-2@ibl</div><br/>
         <button type="button" class="copy-btn" onclick="copyUPI()">📋 Copy UPI ID</button>
 
         <div style="margin:20px 0 12px;border-top:1px solid #e5e5e5;padding-top:18px;">
@@ -217,8 +217,10 @@
 <script src="js/data.js"></script>
 <script>
   var currentPay = 'upi';
-  var UPI_ID = '6281807448-2@ibl';
-  var STORE_NAME = 'BeauLadresses';
+  // Read UPI ID from admin settings (falls back to default if not set)
+  var _s = (getDB().settings || {});
+  var UPI_ID    = _s.upiId   || '6281807448-2@ibl';
+  var STORE_NAME = _s.upiName || 'BeauLadresses';
   var appliedCoupon = null;   // { code, discount }
   var baseTotal = 0;
 
@@ -247,6 +249,9 @@
 
     baseTotal = getCartTotal();
     document.getElementById('checkoutTotal').textContent = formatPrice(baseTotal);
+    // Set UPI chip from settings
+    var chip = document.getElementById('checkoutUpiChip');
+    if (chip) chip.textContent = UPI_ID;
     updateUPILinks(baseTotal);
   });
 
