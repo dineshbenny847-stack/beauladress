@@ -50,6 +50,7 @@ function switchPanel(name, el) {
   if (name === 'stock') renderStockManager();
   if (name === 'orders') renderOrdersTable();
   if (name === 'customers') renderCustomers();
+  if (name === 'coupons')  renderCoupons();
   if (name === 'settings') renderSettings();
 }
 
@@ -943,4 +944,159 @@ function exportOrdersCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showAdminToast('✅ Orders exported to CSV!');
+}
+
+// ── Coupons Admin ─────────────────────────────────────────────────
+function renderCoupons() {
+  const coupons = getCoupons();
+  const search = (document.getElementById('couponSearch')?.value||'').toLowerCase();
+  const filtered = search ? coupons.filter(c => c.code.toLowerCase().includes(search) || (c.description||'').toLowerCase().includes(search)) : coupons;
+
+  // Stats
+  const active   = coupons.filter(c => c.active).length;
+  const inactive = coupons.filter(c => !c.active).length;
+  const totalUsed = coupons.reduce((s,c) => s + (c.usedCount||0), 0);
+  const expired  = coupons.filter(c => c.expiry && new Date(c.expiry) < new Date()).length;
+  const statsEl = document.getElementById('couponStats');
+  if (statsEl) statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-icon green">🎟️</div><div><div class="stat-value">${coupons.length}</div><div class="stat-label">Total Coupons</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">${active}</div><div class="stat-label">Active</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">📊</div><div><div class="stat-value">${totalUsed}</div><div class="stat-label">Times Used</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">⏰</div><div><div class="stat-value">${expired}</div><div class="stat-label">Expired</div></div></div>
+  `;
+
+  const body = document.getElementById('couponsTableBody');
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">No coupons found.</td></tr>'; return;
+  }
+  const today = new Date();
+  body.innerHTML = filtered.map(c => {
+    const isExpired = c.expiry && new Date(c.expiry) < today;
+    const statusBadge = !c.active ? '<span class="badge badge-red">Inactive</span>'
+      : isExpired ? '<span class="badge badge-orange">Expired</span>'
+      : '<span class="badge badge-green">Active</span>';
+    const usageBar = c.maxUses > 0
+      ? `<div style="font-size:.78rem;">${c.usedCount||0} / ${c.maxUses}<br/><div style="background:#f0f0f0;border-radius:3px;height:5px;margin-top:3px;"><div style="width:${Math.min(100,Math.round(((c.usedCount||0)/c.maxUses)*100))}%;background:#c9848a;height:100%;border-radius:3px;"></div></div></div>`
+      : `<span style="font-size:.82rem;">${c.usedCount||0} / ∞</span>`;
+    return `<tr>
+      <td><code style="font-size:.9rem;font-weight:800;background:#f0f0f0;padding:3px 8px;border-radius:6px;">${c.code}</code></td>
+      <td style="font-size:.83rem;">${c.type === 'percent' ? '% Off' : '₹ Flat'}</td>
+      <td style="font-weight:700;">${c.type === 'percent' ? c.value+'%' : '₹'+c.value}</td>
+      <td style="font-size:.82rem;">${c.minOrder > 0 ? '₹'+c.minOrder : '—'}</td>
+      <td>${usageBar}</td>
+      <td style="font-size:.8rem;color:${isExpired?'#dc2626':'#555'};">${c.expiry || '—'}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button style="padding:5px 10px;background:#dcfce7;color:#16a34a;border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;" onclick="openEditCoupon('${c.id}')">✏️ Edit</button>
+          <button style="padding:5px 10px;background:${c.active?'#fee2e2':'#dcfce7'};color:${c.active?'#dc2626':'#16a34a'};border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;" onclick="toggleCouponActive('${c.id}')">${c.active?'🔴 Deactivate':'🟢 Activate'}</button>
+          <button style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;" onclick="confirmDeleteCoupon('${c.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openCouponModal() {
+  document.getElementById('couponModalTitle').textContent = 'New Coupon';
+  document.getElementById('cpnId').value = '';
+  document.getElementById('cpnCode').value = '';
+  document.getElementById('cpnType').value = 'percent';
+  document.getElementById('cpnValue').value = '';
+  document.getElementById('cpnMaxDiscount').value = '';
+  document.getElementById('cpnMinOrder').value = '0';
+  document.getElementById('cpnMaxUses').value = '0';
+  document.getElementById('cpnExpiry').value = '';
+  document.getElementById('cpnDesc').value = '';
+  document.getElementById('cpnActive').checked = true;
+  document.getElementById('couponPreview').style.display = 'none';
+  updateCouponPreview();
+  openModal('couponModal');
+}
+
+function openEditCoupon(id) {
+  const c = getCoupons().find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('couponModalTitle').textContent = 'Edit Coupon';
+  document.getElementById('cpnId').value = c.id;
+  document.getElementById('cpnCode').value = c.code;
+  document.getElementById('cpnType').value = c.type;
+  document.getElementById('cpnValue').value = c.value;
+  document.getElementById('cpnMaxDiscount').value = c.maxDiscount || '';
+  document.getElementById('cpnMinOrder').value = c.minOrder || 0;
+  document.getElementById('cpnMaxUses').value = c.maxUses || 0;
+  document.getElementById('cpnExpiry').value = c.expiry || '';
+  document.getElementById('cpnDesc').value = c.description || '';
+  document.getElementById('cpnActive').checked = !!c.active;
+  updateCouponPreview();
+  openModal('couponModal');
+}
+
+function updateCouponPreview() {
+  const type  = document.getElementById('cpnType')?.value;
+  const value = parseFloat(document.getElementById('cpnValue')?.value);
+  const label = document.getElementById('cpnValueLabel');
+  if (label) label.textContent = type === 'percent' ? 'Discount Value (%) *' : 'Discount Amount (₹) *';
+  const prev = document.getElementById('couponPreview');
+  const txt  = document.getElementById('couponPreviewText');
+  if (!value || isNaN(value)) { if(prev) prev.style.display='none'; return; }
+  const msg = type === 'percent' ? `${value}% discount applied to cart total` : `₹${value} flat discount applied`;
+  if (txt) txt.textContent = msg;
+  if (prev) prev.style.display = 'block';
+}
+
+function saveCouponAdmin() {
+  const id     = document.getElementById('cpnId').value;
+  const code   = document.getElementById('cpnCode').value.trim().toUpperCase();
+  const type   = document.getElementById('cpnType').value;
+  const value  = parseFloat(document.getElementById('cpnValue').value);
+  const maxDis = parseFloat(document.getElementById('cpnMaxDiscount').value) || 0;
+  const minOrd = parseFloat(document.getElementById('cpnMinOrder').value) || 0;
+  const maxUse = parseInt(document.getElementById('cpnMaxUses').value) || 0;
+  const expiry = document.getElementById('cpnExpiry').value;
+  const desc   = document.getElementById('cpnDesc').value.trim();
+  const active = document.getElementById('cpnActive').checked;
+
+  if (!code)          { showAdminToast('❌ Coupon code is required.', true); return; }
+  if (isNaN(value) || value <= 0) { showAdminToast('❌ Enter a valid discount value.', true); return; }
+  if (type === 'percent' && value > 100) { showAdminToast('❌ Percentage cannot exceed 100%.', true); return; }
+  if (!desc)          { showAdminToast('❌ Description is required.', true); return; }
+
+  // Check duplicate code (ignore current if editing)
+  const existing = getCouponByCode(code);
+  if (existing && existing.id !== id) { showAdminToast('❌ A coupon with this code already exists.', true); return; }
+
+  const coupon = {
+    id: id || generateId('CPN'),
+    code, type, value,
+    maxDiscount: maxDis || null,
+    minOrder: minOrd,
+    maxUses: maxUse,
+    usedCount: id ? (getCoupons().find(c=>c.id===id)?.usedCount||0) : 0,
+    expiry: expiry || null,
+    description: desc,
+    active
+  };
+  saveCoupon(coupon);
+  closeModal('couponModal');
+  renderCoupons();
+  showAdminToast(id ? '✅ Coupon updated!' : '✅ Coupon created!');
+}
+
+function toggleCouponActive(id) {
+  updateDB(db => {
+    const c = (db.coupons||[]).find(x => x.id === id);
+    if (c) c.active = !c.active;
+  });
+  renderCoupons();
+  showAdminToast('✅ Coupon status updated.');
+}
+
+function confirmDeleteCoupon(id) {
+  const c = getCoupons().find(x => x.id === id);
+  showConfirm('Delete Coupon', `Delete coupon "${c?.code}"? This cannot be undone.`, () => {
+    deleteCoupon(id);
+    renderCoupons();
+    showAdminToast('🗑 Coupon deleted.');
+  });
 }

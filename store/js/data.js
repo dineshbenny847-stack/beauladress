@@ -30,7 +30,12 @@ const defaultData = {
   cart: [],
   users: [],
   wishlist: [],
-  adminPassword: 'admin123'
+  adminPassword: 'admin123',
+  coupons: [
+    { id:'CPN1', code:'WELCOME10', type:'percent', value:10, minOrder:0,    maxUses:100, usedCount:0, active:true,  expiry:'2026-12-31', description:'10% off on all orders' },
+    { id:'CPN2', code:'FLAT200',   type:'flat',    value:200, minOrder:999, maxUses:50,  usedCount:0, active:true,  expiry:'2026-12-31', description:'Flat ₹200 off on orders above ₹999' },
+    { id:'CPN3', code:'FREESHIP',  type:'percent', value:100, minOrder:500, maxUses:200, usedCount:0, active:false, expiry:'2026-06-30', description:'Free shipping (demo)' }
+  ]
 };
 
 function loadDB() {
@@ -225,4 +230,55 @@ function toggleWishlist(productId) {
 
 function isWishlisted(productId) {
   return getWishlist().includes(productId);
+}
+
+// ── Coupons ──────────────────────────────────────────────────────
+function getCoupons() {
+  return getDB().coupons || [];
+}
+
+function getCouponByCode(code) {
+  return getCoupons().find(c => c.code.toUpperCase() === code.toUpperCase().trim());
+}
+
+// Returns { valid, discount, message, coupon }
+function validateCoupon(code, cartTotal) {
+  if (!code || !code.trim()) return { valid: false, message: 'Enter a coupon code.' };
+  const coupon = getCouponByCode(code);
+  if (!coupon)         return { valid: false, message: 'Coupon code not found.' };
+  if (!coupon.active)  return { valid: false, message: 'This coupon is no longer active.' };
+  if (coupon.expiry && new Date(coupon.expiry) < new Date()) return { valid: false, message: 'This coupon has expired.' };
+  if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses) return { valid: false, message: 'This coupon has reached its usage limit.' };
+  // minOrder is in rupees, cartTotal is in paise
+  if (coupon.minOrder > 0 && cartTotal < coupon.minOrder * 100) {
+    return { valid: false, message: `Minimum order of ${formatPrice(coupon.minOrder * 100)} required for this coupon.` };
+  }
+  let discount = 0;
+  if (coupon.type === 'percent') {
+    discount = Math.round(cartTotal * coupon.value / 100);
+    if (coupon.maxDiscount) discount = Math.min(discount, coupon.maxDiscount * 100);
+  } else if (coupon.type === 'flat') {
+    discount = Math.min(coupon.value * 100, cartTotal);
+  }
+  return { valid: true, discount, coupon, message: `✅ ${coupon.description} — You save ${formatPrice(discount)}!` };
+}
+
+function applyCouponUsage(code) {
+  updateDB(db => {
+    const c = (db.coupons || []).find(x => x.code.toUpperCase() === code.toUpperCase());
+    if (c) c.usedCount = (c.usedCount || 0) + 1;
+  });
+}
+
+function saveCoupon(coupon) {
+  updateDB(db => {
+    if (!db.coupons) db.coupons = [];
+    const idx = db.coupons.findIndex(c => c.id === coupon.id);
+    if (idx > -1) db.coupons[idx] = coupon;
+    else db.coupons.push(coupon);
+  });
+}
+
+function deleteCoupon(id) {
+  updateDB(db => { db.coupons = (db.coupons||[]).filter(c => c.id !== id); });
 }

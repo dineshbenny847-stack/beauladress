@@ -62,10 +62,24 @@
   <div class="order-summary-box">
     <h3>Order Summary</h3>
     <div id="checkoutItems"></div>
+  <div class="order-line" id="couponDiscountRow" style="display:none;color:#16a34a;font-weight:600;">
+      <span>🎟️ Coupon Discount</span><span id="couponDiscountAmt"></span>
+    </div>
     <div class="order-total-line">
       <span>Total</span>
       <span id="checkoutTotal"></span>
     </div>
+  </div>
+
+  <!-- Coupon code box -->
+  <div style="background:#f9f9f9;border:2px solid #e5e5e5;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
+    <p style="font-weight:700;font-size:.92rem;margin-bottom:10px;">🎟️ Have a coupon code?</p>
+    <div style="display:flex;gap:10px;">
+      <input type="text" id="couponInput" placeholder="Enter coupon code" style="flex:1;padding:11px 14px;border:2px solid #e5e5e5;border-radius:10px;font-size:.92rem;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}"/>
+      <button type="button" onclick="applyCoupon()" style="padding:11px 20px;background:#0d0d0d;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;white-space:nowrap;">Apply</button>
+      <button type="button" id="removeCouponBtn" onclick="removeCoupon()" style="display:none;padding:11px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="couponMsg" style="margin-top:8px;font-size:.85rem;"></div>
   </div>
 
   <form id="checkoutForm" onsubmit="handleCheckout(event)">
@@ -205,6 +219,19 @@
   var currentPay = 'upi';
   var UPI_ID = '6281807448-2@ibl';
   var STORE_NAME = 'BeauLadresses';
+  var appliedCoupon = null;   // { code, discount }
+  var baseTotal = 0;
+
+  function updateUPILinks(finalAmt) {
+    var amt = (finalAmt / 100).toFixed(2);
+    var enc = encodeURIComponent;
+    var qr = document.getElementById('qrImg');
+    if (qr) qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + enc('upi://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR');
+    var gpay = document.getElementById('lnk-gpay'); if(gpay) gpay.href = 'gpay://upi/pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    var ppe  = document.getElementById('lnk-phonepe'); if(ppe) ppe.href = 'phonepe://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    var ptm  = document.getElementById('lnk-paytm'); if(ptm) ptm.href = 'paytmmp://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    var bhim = document.getElementById('lnk-bhim'); if(bhim) bhim.href = 'upi://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+  }
 
   document.addEventListener('DOMContentLoaded', function() {
     var cart = getCart();
@@ -218,18 +245,46 @@
     });
     document.getElementById('checkoutItems').innerHTML = html;
 
-    var total = getCartTotal();
-    document.getElementById('checkoutTotal').textContent = formatPrice(total);
-
-    // Set UPI links with amount
-    var amt = (total / 100).toFixed(2);
-    var enc = encodeURIComponent;
-    document.getElementById('qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + enc('upi://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR');
-    document.getElementById('lnk-gpay').href    = 'gpay://upi/pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
-    document.getElementById('lnk-phonepe').href = 'phonepe://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
-    document.getElementById('lnk-paytm').href   = 'paytmmp://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
-    document.getElementById('lnk-bhim').href    = 'upi://pay?pa=' + UPI_ID + '&pn=' + STORE_NAME + '&am=' + amt + '&cu=INR';
+    baseTotal = getCartTotal();
+    document.getElementById('checkoutTotal').textContent = formatPrice(baseTotal);
+    updateUPILinks(baseTotal);
   });
+
+  // ── Coupon logic ──────────────────────────────────────────────
+  function applyCoupon() {
+    var code = document.getElementById('couponInput').value.trim();
+    var result = validateCoupon(code, baseTotal);
+    var msgEl = document.getElementById('couponMsg');
+    if (!result.valid) {
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = '❌ ' + result.message;
+      appliedCoupon = null;
+      document.getElementById('couponDiscountRow').style.display = 'none';
+      document.getElementById('removeCouponBtn').style.display = 'none';
+      document.getElementById('checkoutTotal').textContent = formatPrice(baseTotal);
+      updateUPILinks(baseTotal);
+      return;
+    }
+    appliedCoupon = { code: result.coupon.code, discount: result.discount };
+    var finalTotal = baseTotal - result.discount;
+    msgEl.style.color = '#16a34a';
+    msgEl.textContent = result.message;
+    document.getElementById('couponDiscountAmt').textContent = '−' + formatPrice(result.discount);
+    document.getElementById('couponDiscountRow').style.display = 'flex';
+    document.getElementById('removeCouponBtn').style.display = 'inline-block';
+    document.getElementById('checkoutTotal').textContent = formatPrice(finalTotal);
+    updateUPILinks(finalTotal);
+  }
+
+  function removeCoupon() {
+    appliedCoupon = null;
+    document.getElementById('couponInput').value = '';
+    document.getElementById('couponMsg').textContent = '';
+    document.getElementById('couponDiscountRow').style.display = 'none';
+    document.getElementById('removeCouponBtn').style.display = 'none';
+    document.getElementById('checkoutTotal').textContent = formatPrice(baseTotal);
+    updateUPILinks(baseTotal);
+  }
 
   function switchPay(method) {
     currentPay = method;
@@ -272,9 +327,23 @@
     fd.forEach(function(v, k){ info[k] = v; });
     if (currentPay === 'upi') info.upiTxnId = document.getElementById('upiTxnId').value.trim();
     info.paymentMethod = currentPay;
+    // Attach coupon info
+    if (appliedCoupon) {
+      info.couponCode     = appliedCoupon.code;
+      info.couponDiscount = appliedCoupon.discount;
+      applyCouponUsage(appliedCoupon.code);
+    }
     var order = placeOrder(info);
+    // Store final total after discount
+    if (appliedCoupon) {
+      updateDB(function(db) {
+        var o = db.orders.find(function(x){ return x.id === order.id; });
+        if (o) { o.discount = appliedCoupon.discount; o.total = Math.max(0, o.total - appliedCoupon.discount); }
+      });
+    }
     var notes = { upi: '💳 UPI payment received. We will verify and confirm your order.', cod: '💵 Pay cash when your order arrives at your door.', net: '' };
-    document.getElementById('confirmMsg').textContent = 'Your order has been placed successfully!';
+    var savingMsg = appliedCoupon ? ' You saved ' + formatPrice(appliedCoupon.discount) + ' with coupon ' + appliedCoupon.code + '!' : '';
+    document.getElementById('confirmMsg').textContent = 'Your order has been placed successfully!' + savingMsg;
     document.getElementById('confirmOrderId').textContent = 'Order ID: ' + order.id;
     document.getElementById('confirmPayNote').textContent = notes[currentPay] || '';
     document.getElementById('confirmModal').classList.add('open');
