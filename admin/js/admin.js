@@ -467,11 +467,13 @@ function renderOrdersTable() {
       <td style="font-size:.82rem;">${payLabel[o.customer?.payment||o.customer?.paymentMethod]||'—'}</td>
       <td><strong>${formatPrice(o.total)}</strong></td>
       <td><span class="badge ${STATUS_COLORS[o.status]||'badge-blue'}">${STATUS_ICONS[o.status]||''} ${o.status}</span></td>
-      <td style="display:flex;gap:6px;align-items:center;">
-        <select onchange="updateOrderStatus('${o.id}',this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer;">
-          ${statusOpts}
-        </select>
-        <button class="btn btn-sm btn-success" onclick="openOrderDetail('${o.id}')" title="View full details">👁</button>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select onchange="updateOrderStatus('${o.id}',this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer;">
+            ${statusOpts}
+          </select>
+          <button style="padding:6px 10px;background:#dcfce7;color:#16a34a;border:none;border-radius:7px;font-size:.85rem;cursor:pointer;font-weight:700;white-space:nowrap;" onclick="openOrderDetail('${o.id}')" title="View full details">👁 View</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
