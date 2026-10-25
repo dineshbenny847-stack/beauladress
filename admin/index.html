@@ -41,6 +41,9 @@
       <div class="nav-item active" data-panel="dashboard" onclick="switchPanel('dashboard',this)">
         <span class="nav-icon">📊</span><span>Dashboard</span>
       </div>
+      <div class="nav-item" data-panel="analytics" onclick="switchPanel('analytics',this)">
+        <span class="nav-icon">📈</span><span>Analytics</span>
+      </div>
       <div class="nav-item" data-panel="collections" onclick="switchPanel('collections',this)">
         <span class="nav-icon">🗂️</span><span>Collections</span>
       </div>
@@ -52,6 +55,9 @@
       </div>
       <div class="nav-item" data-panel="orders" onclick="switchPanel('orders',this)">
         <span class="nav-icon">🧾</span><span>Orders</span>
+      </div>
+      <div class="nav-item" data-panel="customers" onclick="switchPanel('customers',this)">
+        <span class="nav-icon">👥</span><span>Customers</span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -157,17 +163,88 @@
       </div>
     </div>
 
+    <!-- ── ANALYTICS ── -->
+    <div class="section-panel" id="panel-analytics">
+      <div class="page-header">
+        <div><h1>Analytics</h1><p>Track your store performance.</p></div>
+      </div>
+      <!-- Revenue summary cards -->
+      <div class="stats-grid" id="analyticsStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <!-- Revenue bar chart -->
+        <div class="card">
+          <div class="card-header"><h2>📅 Revenue by Collection</h2></div>
+          <div class="card-body">
+            <div id="revenueChart" style="width:100%;"></div>
+          </div>
+        </div>
+        <!-- Payment method pie -->
+        <div class="card">
+          <div class="card-header"><h2>💳 Payment Methods</h2></div>
+          <div class="card-body">
+            <div id="paymentChart" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Top products -->
+      <div class="card">
+        <div class="card-header"><h2>🏆 Top Selling Products</h2></div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr><th>Image</th><th>Product</th><th>Collection</th><th>Units Sold</th><th>Revenue</th><th>Rank</th></tr></thead>
+            <tbody id="topProductsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ── ORDERS ── -->
     <div class="section-panel" id="panel-orders">
       <div class="page-header">
-        <div><h1>Orders</h1><p>View all customer orders.</p></div>
+        <div><h1>Orders</h1><p>Manage and update order statuses.</p></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="orderStatusFilter" onchange="renderOrdersTable()" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;">
+            <option value="all">All Statuses</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Processing">Processing</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
       </div>
+      <!-- Order status summary -->
+      <div id="orderStatusCards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;"></div>
       <div class="card">
-        <div class="card-header"><h2>Order History</h2></div>
+        <div class="card-header">
+          <h2>Order History</h2>
+          <span id="orderCount" style="font-size:.82rem;color:var(--muted);"></span>
+        </div>
         <div class="card-body" style="padding:0;">
           <table>
-            <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Update</th></tr></thead>
             <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CUSTOMERS ── -->
+    <div class="section-panel" id="panel-customers">
+      <div class="page-header">
+        <div><h1>Customers</h1><p>All customers who have placed orders.</p></div>
+      </div>
+      <!-- Customer stats -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;" id="customerStats"></div>
+      <div class="card">
+        <div class="card-header">
+          <h2>Customer List</h2>
+          <input type="text" id="customerSearch" oninput="renderCustomers()" placeholder="Search by name or email…" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;width:220px;"/>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Orders</th><th>Total Spent</th><th>Last Order</th></tr></thead>
+            <tbody id="customersTableBody"></tbody>
           </table>
         </div>
       </div>

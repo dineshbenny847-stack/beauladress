@@ -48,10 +48,12 @@ function switchPanel(name, el) {
   el.classList.add('active');
   // Refresh data on switch
   if (name === 'dashboard') renderDashboard();
+  if (name === 'analytics') renderAnalytics();
   if (name === 'collections') renderCollectionsAdmin();
   if (name === 'products') { populateCollectionFilter(); renderProductsTable(); }
   if (name === 'stock') renderStockManager();
   if (name === 'orders') renderOrdersTable();
+  if (name === 'customers') renderCustomers();
 }
 
 // ── Dashboard ────────────────────────────────────────────────────
@@ -421,21 +423,234 @@ function removeAllOutOfStock() {
 }
 
 // ── Orders ───────────────────────────────────────────────────────
+const ORDER_STATUSES = ['Confirmed','Processing','Shipped','Delivered','Cancelled'];
+const STATUS_COLORS  = { Confirmed:'badge-blue', Processing:'badge-orange', Shipped:'badge-green', Delivered:'badge-green', Cancelled:'badge-red' };
+const STATUS_ICONS   = { Confirmed:'📋', Processing:'⚙️', Shipped:'🚚', Delivered:'✅', Cancelled:'❌' };
+
 function renderOrdersTable() {
   const db = getDB();
+  const filterVal = document.getElementById('orderStatusFilter')?.value || 'all';
+  let orders = [...db.orders].reverse();
+  if (filterVal !== 'all') orders = orders.filter(o => o.status === filterVal);
+
+  // Status summary cards
+  const cardWrap = document.getElementById('orderStatusCards');
+  if (cardWrap) {
+    const counts = {};
+    ORDER_STATUSES.forEach(s => counts[s] = db.orders.filter(o => o.status === s).length);
+    cardWrap.innerHTML = ORDER_STATUSES.map(s => `
+      <div style="background:var(--surface);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);text-align:center;cursor:pointer;border:2px solid ${filterVal===s?'#0d0d0d':'transparent'};" onclick="document.getElementById('orderStatusFilter').value='${s}';renderOrdersTable()">
+        <div style="font-size:1.4rem;">${STATUS_ICONS[s]}</div>
+        <div style="font-size:1.3rem;font-weight:800;margin:4px 0;">${counts[s]}</div>
+        <div style="font-size:.75rem;color:var(--muted);">${s}</div>
+      </div>`).join('');
+  }
+
+  const countEl = document.getElementById('orderCount');
+  if (countEl) countEl.textContent = orders.length + ' order(s)';
+
   const body = document.getElementById('ordersTableBody');
-  if (!db.orders.length) {
-    body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">No orders yet. Share the store link!</td></tr>';
+  if (!orders.length) {
+    body.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">${filterVal==='all'?'No orders yet. Share the store link!':'No orders with status: '+filterVal}</td></tr>`;
     return;
   }
-  body.innerHTML = [...db.orders].reverse().map(o => `
+  body.innerHTML = orders.map(o => {
+    const payLabel = { upi:'📱 UPI', cod:'💵 COD', net:'💳 Card', card:'💳 Card' };
+    const statusOpts = ORDER_STATUSES.map(s =>
+      `<option value="${s}" ${o.status===s?'selected':''}>${STATUS_ICONS[s]} ${s}</option>`).join('');
+    return `
     <tr>
-      <td><code style="font-size:.78rem;">${o.id}</code></td>
-      <td>${o.customer?.name || '—'}<br/><span style="font-size:.75rem;color:#888;">${o.customer?.email || ''}</span></td>
-      <td style="font-size:.82rem;">${new Date(o.date).toLocaleDateString('en-IN')}</td>
-      <td>${o.items?.length || 0} item(s)</td>
+      <td><code style="font-size:.75rem;">${o.id.slice(-10)}</code></td>
+      <td><strong>${o.customer?.name||'—'}</strong><br/><span style="font-size:.74rem;color:#888;">${o.customer?.phone||''}</span></td>
+      <td style="font-size:.8rem;">${new Date(o.date).toLocaleDateString('en-IN')}</td>
+      <td style="font-size:.83rem;">${o.items?.length||0} item(s)</td>
+      <td style="font-size:.82rem;">${payLabel[o.customer?.payment||o.customer?.paymentMethod]||'—'}</td>
       <td><strong>${formatPrice(o.total)}</strong></td>
-      <td><span class="badge badge-green order-badge">${o.status}</span></td>
+      <td><span class="badge ${STATUS_COLORS[o.status]||'badge-blue'}">${STATUS_ICONS[o.status]||''} ${o.status}</span></td>
+      <td>
+        <select onchange="updateOrderStatus('${o.id}',this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer;">
+          ${statusOpts}
+        </select>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateOrderStatus(orderId, newStatus) {
+  updateDB(db => {
+    const o = db.orders.find(x => x.id === orderId);
+    if (o) o.status = newStatus;
+  });
+  renderOrdersTable();
+  renderDashboard();
+  showAdminToast('✅ Order status updated to: ' + newStatus);
+}
+
+// ── Analytics ────────────────────────────────────────────────────
+function renderAnalytics() {
+  const db = getDB();
+  const orders = db.orders;
+  const totalRevenue = orders.reduce((s,o) => s + (o.total||0), 0);
+  const totalOrders = orders.length;
+  const avgOrder = totalOrders ? Math.round(totalRevenue / totalOrders) : 0;
+  const deliveredOrders = orders.filter(o => o.status === 'Delivered').length;
+
+  // Stats
+  document.getElementById('analyticsStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon green">💰</div>
+      <div><div class="stat-value">${formatPrice(totalRevenue)}</div><div class="stat-label">Total Revenue</div></div></div>
+    <div class="stat-card"><div class="stat-icon pink">🧾</div>
+      <div><div class="stat-value">${totalOrders}</div><div class="stat-label">Total Orders</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">📦</div>
+      <div><div class="stat-value">${formatPrice(avgOrder)}</div><div class="stat-label">Avg Order Value</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">✅</div>
+      <div><div class="stat-value">${deliveredOrders}</div><div class="stat-label">Delivered</div></div></div>
+  `;
+
+  // Revenue by collection bar chart (SVG)
+  const cols = getCollections();
+  const colRevenue = {};
+  cols.forEach(c => colRevenue[c.id] = 0);
+  orders.forEach(o => {
+    (o.items||[]).forEach(item => {
+      const p = db.products.find(x => x.id === item.productId);
+      if (p) colRevenue[p.collectionId] = (colRevenue[p.collectionId]||0) + (p.price * item.qty);
+    });
+  });
+  const maxRev = Math.max(...Object.values(colRevenue), 1);
+  const barColors = ['#c9848a','#7c5cd8','#2563eb','#16a34a','#d97706'];
+  let barHtml = '<div style="display:flex;flex-direction:column;gap:12px;">';
+  cols.forEach((c, i) => {
+    const rev = colRevenue[c.id] || 0;
+    const pct = Math.round((rev / maxRev) * 100);
+    barHtml += `
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px;">
+          <span style="font-weight:600;">${c.name}</span>
+          <span style="color:var(--muted);">${formatPrice(rev)}</span>
+        </div>
+        <div style="background:#f0f0f0;border-radius:6px;height:22px;overflow:hidden;">
+          <div style="width:${pct}%;background:${barColors[i%barColors.length]};height:100%;border-radius:6px;transition:width .4s;display:flex;align-items:center;padding-left:8px;">
+            ${pct > 15 ? `<span style="font-size:.7rem;color:#fff;font-weight:700;">${pct}%</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  });
+  if (!cols.length) barHtml += '<p style="color:#888;font-size:.88rem;">No collections yet.</p>';
+  barHtml += '</div>';
+  document.getElementById('revenueChart').innerHTML = barHtml;
+
+  // Payment method breakdown
+  const payCount = {};
+  orders.forEach(o => {
+    const pm = o.customer?.paymentMethod || o.customer?.payment || 'Unknown';
+    const label = { upi:'UPI / QR', cod:'Cash on Delivery', net:'Card / Net Banking', card:'Card / Net Banking' }[pm] || pm;
+    payCount[label] = (payCount[label]||0) + 1;
+  });
+  const payColors = { 'UPI / QR':'#7c5cd8', 'Cash on Delivery':'#16a34a', 'Card / Net Banking':'#2563eb', 'Unknown':'#888' };
+  const totalPay = Object.values(payCount).reduce((s,v) => s+v, 0) || 1;
+  let payHtml = '';
+  Object.entries(payCount).forEach(([label, count]) => {
+    const pct = Math.round((count/totalPay)*100);
+    payHtml += `
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px;">
+          <span style="font-weight:600;">${label}</span>
+          <span style="color:var(--muted);">${count} orders (${pct}%)</span>
+        </div>
+        <div style="background:#f0f0f0;border-radius:6px;height:18px;overflow:hidden;">
+          <div style="width:${pct}%;background:${payColors[label]||'#888'};height:100%;border-radius:6px;"></div>
+        </div>
+      </div>`;
+  });
+  if (!Object.keys(payCount).length) payHtml = '<p style="color:#888;font-size:.88rem;">No orders yet.</p>';
+  document.getElementById('paymentChart').innerHTML = payHtml;
+
+  // Top products
+  const productSales = {};
+  orders.forEach(o => {
+    (o.items||[]).forEach(item => {
+      if (!productSales[item.productId]) productSales[item.productId] = { units:0, revenue:0 };
+      productSales[item.productId].units += item.qty;
+      const p = db.products.find(x => x.id === item.productId);
+      if (p) productSales[item.productId].revenue += p.price * item.qty;
+    });
+  });
+  const sorted = Object.entries(productSales).sort((a,b) => b[1].units - a[1].units).slice(0, 10);
+  const medals = ['🥇','🥈','🥉'];
+  const topBody = document.getElementById('topProductsBody');
+  if (!sorted.length) {
+    topBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">No sales data yet.</td></tr>';
+    return;
+  }
+  topBody.innerHTML = sorted.map(([pid, data], i) => {
+    const p = db.products.find(x => x.id === pid);
+    const col = p ? getCollectionById(p.collectionId) : null;
+    return `<tr>
+      <td><img class="product-thumb" src="${p?.image||''}" alt="" onerror="this.style.display='none'"/></td>
+      <td><strong>${p?.name||'Deleted product'}</strong></td>
+      <td style="font-size:.82rem;color:#888;">${col?.name||'—'}</td>
+      <td><strong>${data.units}</strong> units</td>
+      <td>${formatPrice(data.revenue)}</td>
+      <td style="font-size:1.2rem;">${medals[i]||'#'+(i+1)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Customers ────────────────────────────────────────────────────
+function renderCustomers() {
+  const db = getDB();
+  const search = (document.getElementById('customerSearch')?.value||'').toLowerCase();
+
+  // Build unique customer map from orders
+  const custMap = {};
+  db.orders.forEach(o => {
+    const email = o.customer?.email || o.customer?.phone || 'unknown';
+    if (!custMap[email]) {
+      custMap[email] = {
+        name: o.customer?.name || '—',
+        email: o.customer?.email || '—',
+        phone: o.customer?.phone || '—',
+        city: o.customer?.city || '—',
+        orders: 0, totalSpent: 0, lastOrder: o.date
+      };
+    }
+    custMap[email].orders++;
+    custMap[email].totalSpent += o.total || 0;
+    if (new Date(o.date) > new Date(custMap[email].lastOrder)) custMap[email].lastOrder = o.date;
+  });
+
+  let customers = Object.values(custMap);
+  if (search) customers = customers.filter(c =>
+    c.name.toLowerCase().includes(search) || c.email.toLowerCase().includes(search) || c.phone.includes(search));
+
+  // Stats cards
+  const totalCusts = Object.keys(custMap).length;
+  const totalSpentAll = Object.values(custMap).reduce((s,c) => s + c.totalSpent, 0);
+  const repeatCusts = Object.values(custMap).filter(c => c.orders > 1).length;
+  document.getElementById('customerStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon pink">👥</div>
+      <div><div class="stat-value">${totalCusts}</div><div class="stat-label">Total Customers</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">🔁</div>
+      <div><div class="stat-value">${repeatCusts}</div><div class="stat-label">Repeat Customers</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">💰</div>
+      <div><div class="stat-value">${formatPrice(totalSpentAll)}</div><div class="stat-label">Total Customer Spend</div></div></div>
+  `;
+
+  const body = document.getElementById('customersTableBody');
+  if (!customers.length) {
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#888;padding:20px;">${search?'No customers match your search.':'No customers yet.'}</td></tr>`;
+    return;
+  }
+  body.innerHTML = customers.sort((a,b) => b.totalSpent - a.totalSpent).map(c => `
+    <tr>
+      <td><strong>${c.name}</strong></td>
+      <td style="font-size:.83rem;">${c.email}</td>
+      <td style="font-size:.83rem;">${c.phone}</td>
+      <td style="font-size:.83rem;">${c.city}</td>
+      <td><span class="badge badge-blue">${c.orders}</span></td>
+      <td><strong>${formatPrice(c.totalSpent)}</strong></td>
+      <td style="font-size:.8rem;color:#888;">${new Date(c.lastOrder).toLocaleDateString('en-IN')}</td>
     </tr>`).join('');
 }
 
