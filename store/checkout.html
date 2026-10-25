@@ -6,8 +6,8 @@
   <title>Checkout — Beau L'adresses</title>
   <link rel="stylesheet" href="css/style.css"/>
   <style>
-    .payment-section { display: none; }
-    .payment-section.active { display: block; }
+    .payment-section { display: none !important; }
+    .payment-section.active { display: block !important; }
 
     /* Payment method cards */
     .payment-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 8px; }
@@ -117,16 +117,16 @@
     <!-- Payment Method -->
     <div class="form-group" style="margin-top:28px;">
       <label style="font-weight:700;font-size:1rem;margin-bottom:12px;display:block;">Choose Payment Method</label>
-      <div class="payment-options">
-        <div class="pay-card selected" onclick="selectPayment('upi',this)">
+      <div class="payment-options" id="paymentOptions">
+        <div class="pay-card selected" id="pay-upi" onclick="selectPayment('upi')">
           <div class="pay-icon">📱</div>
           <div class="pay-label">UPI / QR</div>
         </div>
-        <div class="pay-card" onclick="selectPayment('cod',this)">
+        <div class="pay-card" id="pay-cod" onclick="selectPayment('cod')">
           <div class="pay-icon">💵</div>
           <div class="pay-label">Cash on Delivery</div>
         </div>
-        <div class="pay-card" onclick="selectPayment('card',this)">
+        <div class="pay-card" id="pay-card" onclick="selectPayment('card')">
           <div class="pay-icon">💳</div>
           <div class="pay-label">Card / Net Banking</div>
         </div>
@@ -251,19 +251,19 @@
       `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=${upiBase}%26pn=${name}%26am=${amt}%26cu=INR`;
   });
 
-  function selectPayment(method, el) {
+  function selectPayment(method) {
     selectedPaymentMethod = method;
     document.getElementById('paymentInput').value = method;
+    // update card highlight
     document.querySelectorAll('.pay-card').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
+    document.getElementById('pay-' + method).classList.add('selected');
+    // show correct section
     document.querySelectorAll('.payment-section').forEach(s => s.classList.remove('active'));
     document.getElementById('section-' + method).classList.add('active');
   }
 
   function selectPaymentByName(method) {
-    const cards = document.querySelectorAll('.pay-card');
-    const map = { upi: 0, cod: 1, card: 2 };
-    selectPayment(method, cards[map[method]]);
+    selectPayment(method);
   }
 
   function copyUPI() {
