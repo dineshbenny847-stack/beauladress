@@ -1298,13 +1298,13 @@ function renderSettings() {
   const db = getDB();
   const s = db.settings || {};
 
-  const storeName = s.storeName  || "Beau L'adresses";
+  const storeName = s.storeName  || "Beaula Dresses";
   const tagline   = s.tagline    || 'Curated fashion for the modern woman';
   const email     = s.email      || 'hello@beauladresses.com';
   const phone     = s.phone      || '';
   const city      = s.city       || 'Mumbai, India';
   const upiId     = s.upiId      || '6281807448-2@ibl';
-  const upiName   = s.upiName    || 'BeauLadresses';
+  const upiName   = s.upiName    || 'Beaula Dresses';
 
   // Fill in form fields
   document.getElementById('setStoreName').value = storeName;
