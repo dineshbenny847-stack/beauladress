@@ -59,6 +59,9 @@
       <div class="nav-item" data-panel="customers" onclick="switchPanel('customers',this)">
         <span class="nav-icon">👥</span><span>Customers</span>
       </div>
+      <div class="nav-item" data-panel="settings" onclick="switchPanel('settings',this)">
+        <span class="nav-icon">⚙️</span><span>Settings</span>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <a href="../store/index.html" target="_blank"><span>🛍️</span><span class="text"> View Store</span></a>
@@ -79,6 +82,7 @@
         </div>
         <span id="dashDate" style="font-size:.85rem;color:#888;"></span>
       </div>
+      <div id="dashLowStockBanner"></div>
       <div class="stats-grid" id="statsGrid"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
         <div class="card">
@@ -202,7 +206,8 @@
     <div class="section-panel" id="panel-orders">
       <div class="page-header">
         <div><h1>Orders</h1><p>Manage and update order statuses.</p></div>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="orderSearch" oninput="renderOrdersTable()" placeholder="Search by name, phone, Order ID…" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;width:220px;"/>
           <select id="orderStatusFilter" onchange="renderOrdersTable()" style="padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;">
             <option value="all">All Statuses</option>
             <option value="Confirmed">Confirmed</option>
@@ -211,6 +216,7 @@
             <option value="Delivered">Delivered</option>
             <option value="Cancelled">Cancelled</option>
           </select>
+          <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()" style="white-space:nowrap;">⬇ Export CSV</button>
         </div>
       </div>
       <!-- Order status summary -->
@@ -247,6 +253,75 @@
             <tbody id="customersTableBody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="section-panel" id="panel-settings">
+      <div class="page-header">
+        <div><h1>Settings</h1><p>Manage your store configuration and account.</p></div>
+      </div>
+
+      <!-- Low Stock Alert Banner -->
+      <div id="settingsLowStockBanner"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+        <!-- Store Info -->
+        <div class="card">
+          <div class="card-header"><h2>🏪 Store Information</h2></div>
+          <div class="card-body">
+            <div class="fld"><label>Store Name</label><input type="text" id="setStoreName" placeholder="Beau L'adresses"/></div>
+            <div class="fld"><label>Store Tagline</label><input type="text" id="setTagline" placeholder="Curated fashion for the modern woman"/></div>
+            <div class="fld"><label>Contact Email</label><input type="email" id="setEmail" placeholder="hello@beauladresses.com"/></div>
+            <div class="fld"><label>Contact Phone</label><input type="tel" id="setPhone" placeholder="+91 98765 43210"/></div>
+            <div class="fld"><label>Location / City</label><input type="text" id="setCity" placeholder="Mumbai, India"/></div>
+            <button class="btn btn-primary" onclick="saveStoreSettings()" style="width:100%;margin-top:4px;">💾 Save Store Info</button>
+          </div>
+        </div>
+
+        <!-- Payment Settings -->
+        <div class="card">
+          <div class="card-header"><h2>💳 Payment Settings</h2></div>
+          <div class="card-body">
+            <div class="fld"><label>UPI ID</label><input type="text" id="setUpiId" placeholder="yourname@upi"/></div>
+            <div class="fld"><label>UPI Display Name</label><input type="text" id="setUpiName" placeholder="Beau Ladresses"/></div>
+            <div class="fld" style="margin-top:8px;">
+              <label>Current QR Preview</label>
+              <div style="text-align:center;margin-top:8px;">
+                <div style="background:#fff;border:2px solid var(--border);border-radius:10px;padding:12px;display:inline-block;">
+                  <img id="settingsQR" src="" style="width:140px;height:140px;" alt="UPI QR"/>
+                </div>
+                <p style="font-size:.75rem;color:var(--muted);margin-top:6px;">QR updates when you save</p>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="savePaymentSettings()" style="width:100%;margin-top:4px;">💾 Save Payment Info</button>
+          </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card">
+          <div class="card-header"><h2>🔐 Change Password</h2></div>
+          <div class="card-body">
+            <div class="fld"><label>Current Password</label><input type="password" id="setPwdCurrent" placeholder="Enter current password"/></div>
+            <div class="fld"><label>New Password</label><input type="password" id="setPwdNew" placeholder="Enter new password (min 6 chars)"/></div>
+            <div class="fld"><label>Confirm New Password</label><input type="password" id="setPwdConfirm" placeholder="Repeat new password"/></div>
+            <button class="btn btn-primary" onclick="changePassword()" style="width:100%;margin-top:4px;">🔐 Update Password</button>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card" style="border:2px solid #fee2e2;">
+          <div class="card-header" style="background:#fff5f5;"><h2 style="color:#dc2626;">⚠️ Danger Zone</h2></div>
+          <div class="card-body">
+            <p style="font-size:.88rem;color:#555;margin-bottom:16px;line-height:1.6;">These actions are permanent and cannot be undone. Use with caution.</p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="confirmClearOrders()">🗑 Clear All Orders</button>
+              <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="confirmResetStore()">⚡ Reset Entire Store Data</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 

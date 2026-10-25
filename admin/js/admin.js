@@ -54,6 +54,7 @@ function switchPanel(name, el) {
   if (name === 'stock') renderStockManager();
   if (name === 'orders') renderOrdersTable();
   if (name === 'customers') renderCustomers();
+  if (name === 'settings') renderSettings();
 }
 
 // ── Dashboard ────────────────────────────────────────────────────
@@ -114,6 +115,9 @@ function renderDashboard() {
       </tr>`).join('')}
     </tbody></table>`;
   }
+
+  // Low stock banner on dashboard
+  renderLowStockBanner('dashLowStockBanner', db);
 }
 
 // ── Collections ──────────────────────────────────────────────────
@@ -430,8 +434,15 @@ const STATUS_ICONS   = { Confirmed:'📋', Processing:'⚙️', Shipped:'🚚', 
 function renderOrdersTable() {
   const db = getDB();
   const filterVal = document.getElementById('orderStatusFilter')?.value || 'all';
+  const searchVal = (document.getElementById('orderSearch')?.value || '').toLowerCase().trim();
   let orders = [...db.orders].reverse();
   if (filterVal !== 'all') orders = orders.filter(o => o.status === filterVal);
+  if (searchVal) orders = orders.filter(o =>
+    o.id.toLowerCase().includes(searchVal) ||
+    (o.customer?.name||'').toLowerCase().includes(searchVal) ||
+    (o.customer?.phone||'').includes(searchVal) ||
+    (o.customer?.email||'').toLowerCase().includes(searchVal)
+  );
 
   // Status summary cards
   const cardWrap = document.getElementById('orderStatusCards');
@@ -779,4 +790,161 @@ function showAdminToast(msg, isError) {
   t.style.background = isError ? '#dc2626' : '#0d0d0d';
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Low Stock Banner ─────────────────────────────────────────────
+function renderLowStockBanner(elId, db) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const oos = db.products.filter(p => p.stock === 0).length;
+  const low = db.products.filter(p => p.stock > 0 && p.stock <= 3).length;
+  if (!oos && !low) { el.innerHTML = ''; return; }
+  let msgs = [];
+  if (oos) msgs.push(`<strong>${oos} item(s) are out of stock</strong>`);
+  if (low) msgs.push(`<strong>${low} item(s) are running low (≤3 units)</strong>`);
+  el.innerHTML = `
+    <div style="background:#fef3c7;border:2px solid #fde047;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.3rem;">⚠️</span>
+        <span style="font-size:.9rem;color:#92400e;">${msgs.join(' · ')} — <a href="#" onclick="switchPanel('stock',document.querySelector('[data-panel=stock]'));return false;" style="color:#92400e;font-weight:700;text-decoration:underline;">Go to Stock Manager →</a></span>
+      </div>
+    </div>`;
+}
+
+// ── Settings ─────────────────────────────────────────────────────
+function renderSettings() {
+  const db = getDB();
+  const s = db.settings || {};
+
+  // Fill in form fields
+  document.getElementById('setStoreName').value  = s.storeName  || "Beau L'adresses";
+  document.getElementById('setTagline').value    = s.tagline    || 'Curated fashion for the modern woman';
+  document.getElementById('setEmail').value      = s.email      || 'hello@beauladresses.com';
+  document.getElementById('setPhone').value      = s.phone      || '';
+  document.getElementById('setCity').value       = s.city       || 'Mumbai, India';
+  document.getElementById('setUpiId').value      = s.upiId      || '6281807448-2@ibl';
+  document.getElementById('setUpiName').value    = s.upiName    || 'BeauLadresses';
+
+  // QR preview
+  updateSettingsQR(s.upiId || '6281807448-2@ibl', s.upiName || 'BeauLadresses');
+
+  // Live update QR as user types
+  document.getElementById('setUpiId').oninput = function() {
+    updateSettingsQR(this.value, document.getElementById('setUpiName').value);
+  };
+
+  // Low stock banner in settings
+  renderLowStockBanner('settingsLowStockBanner', db);
+}
+
+function updateSettingsQR(upiId, name) {
+  const qr = document.getElementById('settingsQR');
+  if (!qr || !upiId.trim()) return;
+  qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
+    encodeURIComponent('upi://pay?pa=' + upiId.trim() + '&pn=' + (name||'Store') + '&cu=INR');
+}
+
+function saveStoreSettings() {
+  const name  = document.getElementById('setStoreName').value.trim();
+  const tag   = document.getElementById('setTagline').value.trim();
+  const email = document.getElementById('setEmail').value.trim();
+  const phone = document.getElementById('setPhone').value.trim();
+  const city  = document.getElementById('setCity').value.trim();
+  if (!name) { showAdminToast('❌ Store name cannot be empty.', true); return; }
+  updateDB(db => {
+    if (!db.settings) db.settings = {};
+    db.settings.storeName = name;
+    db.settings.tagline   = tag;
+    db.settings.email     = email;
+    db.settings.phone     = phone;
+    db.settings.city      = city;
+  });
+  showAdminToast('✅ Store information saved!');
+}
+
+function savePaymentSettings() {
+  const upiId   = document.getElementById('setUpiId').value.trim();
+  const upiName = document.getElementById('setUpiName').value.trim();
+  if (!upiId) { showAdminToast('❌ UPI ID cannot be empty.', true); return; }
+  updateDB(db => {
+    if (!db.settings) db.settings = {};
+    db.settings.upiId   = upiId;
+    db.settings.upiName = upiName;
+  });
+  updateSettingsQR(upiId, upiName);
+  showAdminToast('✅ Payment settings saved! Remember to update checkout.html with new UPI ID.');
+}
+
+function changePassword() {
+  const current = document.getElementById('setPwdCurrent').value;
+  const newPwd  = document.getElementById('setPwdNew').value;
+  const confirm = document.getElementById('setPwdConfirm').value;
+  const db = getDB();
+  if (current !== db.adminPassword) { showAdminToast('❌ Current password is incorrect.', true); return; }
+  if (newPwd.length < 6) { showAdminToast('❌ New password must be at least 6 characters.', true); return; }
+  if (newPwd !== confirm) { showAdminToast('❌ Passwords do not match.', true); return; }
+  updateDB(d => { d.adminPassword = newPwd; });
+  document.getElementById('setPwdCurrent').value = '';
+  document.getElementById('setPwdNew').value = '';
+  document.getElementById('setPwdConfirm').value = '';
+  showAdminToast('✅ Password changed successfully!');
+}
+
+function confirmClearOrders() {
+  showConfirm('Clear All Orders', 'This will permanently delete ALL orders. Are you sure?', () => {
+    updateDB(db => { db.orders = []; });
+    renderDashboard();
+    showAdminToast('🗑 All orders cleared.');
+  });
+}
+
+function confirmResetStore() {
+  showConfirm('Reset Entire Store', 'This will DELETE all products, collections, orders and reset to factory defaults. This CANNOT be undone!', () => {
+    localStorage.removeItem('beauladresses_db');
+    showAdminToast('⚡ Store reset. Reloading…');
+    setTimeout(() => location.reload(), 1500);
+  });
+}
+
+// ── Export Orders CSV ─────────────────────────────────────────────
+function exportOrdersCSV() {
+  const db = getDB();
+  if (!db.orders.length) { showAdminToast('No orders to export.', true); return; }
+
+  const headers = ['Order ID','Date','Status','Customer Name','Email','Phone','Address','City','PIN','State','Payment Method','UPI Txn ID','Items','Total (₹)'];
+  const rows = db.orders.map(o => {
+    const c = o.customer || {};
+    const items = (o.items||[]).map(i => {
+      const p = db.products.find(x => x.id === i.productId);
+      return `${p ? p.name : 'Unknown'} (${i.size}) x${i.qty}`;
+    }).join(' | ');
+    return [
+      o.id,
+      new Date(o.date).toLocaleString('en-IN'),
+      o.status,
+      c.name   || '',
+      c.email  || '',
+      c.phone  || '',
+      c.address|| '',
+      c.city   || '',
+      c.pin    || '',
+      c.state  || '',
+      c.paymentMethod || c.payment || '',
+      c.upiTxnId || '',
+      items,
+      ((o.total||0)/100).toFixed(2)
+    ].map(v => '"' + String(v).replace(/"/g,'""') + '"');
+  });
+
+  const csv = [headers.map(h => '"'+h+'"').join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'beauladresses_orders_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showAdminToast('✅ Orders exported to CSV!');
 }
