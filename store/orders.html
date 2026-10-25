@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Orders — Beau L'adresses</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .orders-wrap { max-width: 800px; margin: 40px auto; padding: 0 20px 60px; }
+    .orders-wrap h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
+    .orders-wrap .sub { color: #888; font-size: .92rem; margin-bottom: 32px; }
+
+    /* Search bar */
+    .search-row { display: flex; gap: 10px; margin-bottom: 24px; }
+    .search-row input { flex: 1; padding: 12px 16px; border: 2px solid #e5e5e5; border-radius: 50px; font-size: .95rem; }
+    .search-row input:focus { outline: none; border-color: #0d0d0d; }
+    .search-row button { padding: 12px 24px; background: #0d0d0d; color: #fff; border-radius: 50px; font-size: .9rem; font-weight: 700; border: none; cursor: pointer; }
+    .search-row button:hover { background: #333; }
+
+    /* Order card */
+    .order-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.08); margin-bottom: 20px; overflow: hidden; border: 2px solid transparent; transition: border-color .2s; }
+    .order-card:hover { border-color: #e5e5e5; }
+    .order-card-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 10px; }
+    .order-id { font-family: monospace; font-size: .8rem; color: #888; }
+    .order-date { font-size: .82rem; color: #888; }
+    .order-card-body { padding: 18px 22px; }
+
+    /* Status tracker */
+    .status-track { display: flex; align-items: center; gap: 0; margin: 16px 0 20px; overflow-x: auto; padding-bottom: 4px; }
+    .track-step { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 70px; position: relative; }
+    .track-step:not(:last-child)::after { content: ''; position: absolute; top: 18px; left: 60%; width: 80%; height: 3px; background: #e5e5e5; z-index: 0; }
+    .track-step.done:not(:last-child)::after { background: #16a34a; }
+    .track-dot { width: 36px; height: 36px; border-radius: 50%; background: #e5e5e5; display: flex; align-items: center; justify-content: center; font-size: 1rem; z-index: 1; position: relative; transition: all .3s; }
+    .track-step.done .track-dot { background: #16a34a; color: #fff; }
+    .track-step.active .track-dot { background: #0d0d0d; color: #fff; box-shadow: 0 0 0 4px rgba(13,13,13,.15); }
+    .track-step.cancelled .track-dot { background: #dc2626; color: #fff; }
+    .track-label { font-size: .7rem; font-weight: 600; color: #888; margin-top: 6px; text-align: center; }
+    .track-step.done .track-label, .track-step.active .track-label { color: #0d0d0d; }
+    .track-step.cancelled .track-label { color: #dc2626; }
+
+    /* Items in order */
+    .order-items { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .order-item-chip { display: flex; align-items: center; gap: 8px; background: #f7f8fa; border-radius: 10px; padding: 8px 12px; font-size: .83rem; }
+    .order-item-chip img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
+    .order-item-name { font-weight: 600; }
+    .order-item-meta { color: #888; font-size: .76rem; }
+
+    /* Footer row */
+    .order-card-foot { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; background: #fafafa; border-top: 1px solid #f0f0f0; flex-wrap: wrap; gap: 8px; }
+    .order-total { font-weight: 800; font-size: 1rem; }
+    .order-pay-method { font-size: .8rem; color: #888; }
+
+    /* Status badges */
+    .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 50px; font-size: .78rem; font-weight: 700; }
+    .s-confirmed  { background: #dbeafe; color: #1d4ed8; }
+    .s-processing { background: #fef3c7; color: #92400e; }
+    .s-shipped    { background: #e0f2fe; color: #0369a1; }
+    .s-delivered  { background: #dcfce7; color: #15803d; }
+    .s-cancelled  { background: #fee2e2; color: #b91c1c; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-state .icon { font-size: 3.5rem; margin-bottom: 12px; }
+    .empty-state h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+    .empty-state p { color: #888; margin-bottom: 24px; }
+
+    @media(max-width:600px) {
+      .order-card-head { flex-direction: column; align-items: flex-start; }
+      .status-track { gap: 0; }
+      .track-step { min-width: 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container nav-inner">
+    <a href="index.html" class="nav-logo">Beau <span>L'adresses</span></a>
+    <div class="nav-links">
+      <a href="index.html#collections">Collections</a>
+      <a href="index.html#shop">Shop</a>
+      <a href="orders.html" style="color:#c9848a;font-weight:700;">My Orders</a>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-icon-btn" onclick="window.location.href='index.html'" title="Back to shop">🛍️</button>
+    </div>
+  </div>
+</nav>
+
+<div class="orders-wrap">
+  <h1>My Orders</h1>
+  <p class="sub">Track all your orders and their current delivery status.</p>
+
+  <!-- Search by Order ID or phone -->
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search by Order ID, name or phone number…" oninput="renderOrders()"/>
+    <button onclick="renderOrders()">Search</button>
+  </div>
+
+  <div id="ordersContainer"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="js/data.js"></script>
+<script>
+  const STEPS = ['Confirmed','Processing','Shipped','Delivered'];
+  const STEP_ICONS = { Confirmed:'📋', Processing:'⚙️', Shipped:'🚚', Delivered:'✅', Cancelled:'❌' };
+  const STATUS_CLASS = { Confirmed:'s-confirmed', Processing:'s-processing', Shipped:'s-shipped', Delivered:'s-delivered', Cancelled:'s-cancelled' };
+  const PAY_LABEL = { upi:'📱 UPI / QR', cod:'💵 Cash on Delivery', net:'💳 Card', card:'💳 Card' };
+
+  function renderOrders() {
+    const db = getDB();
+    const search = document.getElementById('searchInput').value.trim().toLowerCase();
+    let orders = [...db.orders].reverse();
+    if (search) {
+      orders = orders.filter(o =>
+        o.id.toLowerCase().includes(search) ||
+        (o.customer?.name||'').toLowerCase().includes(search) ||
+        (o.customer?.phone||'').includes(search) ||
+        (o.customer?.email||'').toLowerCase().includes(search)
+      );
+    }
+
+    const wrap = document.getElementById('ordersContainer');
+    if (!orders.length) {
+      wrap.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📦</div>
+          <h2>${search ? 'No orders found' : 'No orders yet'}</h2>
+          <p>${search ? 'Try a different Order ID or phone number.' : 'Start shopping and your orders will appear here!'}</p>
+          <a href="index.html#shop" class="btn btn-primary">Shop Now →</a>
+        </div>`;
+      return;
+    }
+
+    wrap.innerHTML = orders.map(o => buildOrderCard(o, db)).join('');
+  }
+
+  function buildOrderCard(o, db) {
+    const c = o.customer || {};
+    const isCancelled = o.status === 'Cancelled';
+    const currentStep = isCancelled ? -1 : STEPS.indexOf(o.status);
+
+    // Status tracker
+    let trackerHtml = '';
+    if (isCancelled) {
+      trackerHtml = `<div style="display:flex;align-items:center;gap:10px;padding:12px 0 20px;">
+        <div class="track-dot cancelled" style="width:36px;height:36px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1rem;">❌</div>
+        <div>
+          <p style="font-weight:700;color:#dc2626;font-size:.92rem;">Order Cancelled</p>
+          <p style="font-size:.8rem;color:#888;">This order has been cancelled.</p>
+        </div>
+      </div>`;
+    } else {
+      trackerHtml = '<div class="status-track">';
+      STEPS.forEach((step, i) => {
+        const isDone = i < currentStep;
+        const isActive = i === currentStep;
+        const cls = isDone ? 'done' : isActive ? 'active' : '';
+        trackerHtml += `
+          <div class="track-step ${cls}">
+            <div class="track-dot">${isDone ? '✓' : STEP_ICONS[step]}</div>
+            <div class="track-label">${step}</div>
+          </div>`;
+      });
+      trackerHtml += '</div>';
+    }
+
+    // Items
+    const itemsHtml = (o.items||[]).map(item => {
+      const p = db.products.find(x => x.id === item.productId);
+      return `<div class="order-item-chip">
+        ${p ? `<img src="${p.image}" alt="${p.name}" onerror="this.style.display='none'"/>` : ''}
+        <div>
+          <div class="order-item-name">${p ? p.name : 'Item'}</div>
+          <div class="order-item-meta">Size: ${item.size} · Qty: ${item.qty}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const payMethod = PAY_LABEL[c.paymentMethod || c.payment] || '—';
+    const statusCls = STATUS_CLASS[o.status] || 's-confirmed';
+
+    return `
+    <div class="order-card">
+      <div class="order-card-head">
+        <div>
+          <div class="order-id">Order ID: ${o.id}</div>
+          <div class="order-date">Placed on ${new Date(o.date).toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+        <span class="status-pill ${statusCls}">${STEP_ICONS[o.status]} ${o.status}</span>
+      </div>
+
+      <div class="order-card-body">
+        ${trackerHtml}
+
+        <!-- Items -->
+        <p style="font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Items Ordered</p>
+        <div class="order-items">${itemsHtml}</div>
+
+        <!-- Delivery details -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0;">
+          <div>
+            <p style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">📍 Delivery Address</p>
+            <p style="font-size:.87rem;font-weight:600;">${c.name||'—'}</p>
+            <p style="font-size:.83rem;color:#555;">${c.address||''}</p>
+            <p style="font-size:.83rem;color:#555;">${c.city||''} ${c.pin ? '- '+c.pin : ''}</p>
+            <p style="font-size:.83rem;color:#555;">${c.state||''}</p>
+            <p style="font-size:.83rem;color:#555;margin-top:4px;">📞 ${c.phone||'—'}</p>
+          </div>
+          <div>
+            <p style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">💳 Payment</p>
+            <p style="font-size:.87rem;font-weight:600;">${payMethod}</p>
+            ${c.upiTxnId ? `<p style="font-size:.8rem;color:#555;margin-top:4px;">Txn ID: <code>${c.upiTxnId}</code></p>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="order-card-foot">
+        <div class="order-pay-method">${(o.items||[]).length} item(s)</div>
+        <div class="order-total">Total: ${formatPrice(o.total)}</div>
+      </div>
+    </div>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', renderOrders);
+</script>
+</body>
+</html>

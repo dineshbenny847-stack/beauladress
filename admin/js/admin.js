@@ -460,17 +460,18 @@ function renderOrdersTable() {
       `<option value="${s}" ${o.status===s?'selected':''}>${STATUS_ICONS[s]} ${s}</option>`).join('');
     return `
     <tr>
-      <td><code style="font-size:.75rem;">${o.id.slice(-10)}</code></td>
+      <td><code style="font-size:.75rem;cursor:pointer;color:#2563eb;text-decoration:underline;" onclick="openOrderDetail('${o.id}')">${o.id.slice(-10)}</code></td>
       <td><strong>${o.customer?.name||'—'}</strong><br/><span style="font-size:.74rem;color:#888;">${o.customer?.phone||''}</span></td>
       <td style="font-size:.8rem;">${new Date(o.date).toLocaleDateString('en-IN')}</td>
       <td style="font-size:.83rem;">${o.items?.length||0} item(s)</td>
       <td style="font-size:.82rem;">${payLabel[o.customer?.payment||o.customer?.paymentMethod]||'—'}</td>
       <td><strong>${formatPrice(o.total)}</strong></td>
       <td><span class="badge ${STATUS_COLORS[o.status]||'badge-blue'}">${STATUS_ICONS[o.status]||''} ${o.status}</span></td>
-      <td>
+      <td style="display:flex;gap:6px;align-items:center;">
         <select onchange="updateOrderStatus('${o.id}',this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer;">
           ${statusOpts}
         </select>
+        <button class="btn btn-sm btn-success" onclick="openOrderDetail('${o.id}')" title="View full details">👁</button>
       </td>
     </tr>`;
   }).join('');
@@ -484,6 +485,109 @@ function updateOrderStatus(orderId, newStatus) {
   renderOrdersTable();
   renderDashboard();
   showAdminToast('✅ Order status updated to: ' + newStatus);
+}
+
+let _currentDetailOrderId = null;
+
+function openOrderDetail(orderId) {
+  const db = getDB();
+  const o = db.orders.find(x => x.id === orderId);
+  if (!o) return;
+  _currentDetailOrderId = orderId;
+
+  const c = o.customer || {};
+  const payLabel = { upi:'📱 UPI / QR', cod:'💵 Cash on Delivery', net:'💳 Card / Net Banking', card:'💳 Card / Net Banking' };
+  const payMethod = payLabel[c.paymentMethod || c.payment] || c.paymentMethod || c.payment || '—';
+
+  // Build items table
+  let itemRows = (o.items||[]).map(item => {
+    const p = db.products.find(x => x.id === item.productId);
+    return `<tr>
+      <td style="padding:8px 10px;">${p ? `<img src="${p.image}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px;"/>${p.name}` : 'Deleted product'}</td>
+      <td style="padding:8px 10px;">${item.size||'—'}</td>
+      <td style="padding:8px 10px;text-align:center;">${item.qty}</td>
+      <td style="padding:8px 10px;text-align:right;">${p ? formatPrice(p.price * item.qty) : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('orderDetailBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+
+      <!-- Customer Info -->
+      <div style="background:var(--bg);border-radius:10px;padding:16px;">
+        <p style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">👤 Customer Details</p>
+        <table style="width:100%;font-size:.87rem;border-collapse:collapse;">
+          <tr><td style="padding:5px 0;color:var(--muted);width:40%;">Name</td><td style="padding:5px 0;font-weight:600;">${c.name||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">Mobile</td><td style="padding:5px 0;font-weight:600;">${c.phone||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">Email</td><td style="padding:5px 0;">${c.email||'—'}</td></tr>
+        </table>
+      </div>
+
+      <!-- Delivery Address -->
+      <div style="background:var(--bg);border-radius:10px;padding:16px;">
+        <p style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">📍 Delivery Address</p>
+        <table style="width:100%;font-size:.87rem;border-collapse:collapse;">
+          <tr><td style="padding:5px 0;color:var(--muted);width:40%;">Address</td><td style="padding:5px 0;font-weight:600;">${c.address||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">City</td><td style="padding:5px 0;">${c.city||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">PIN Code</td><td style="padding:5px 0;">${c.pin||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">State</td><td style="padding:5px 0;">${c.state||'—'}</td></tr>
+        </table>
+      </div>
+
+      <!-- Payment Info -->
+      <div style="background:var(--bg);border-radius:10px;padding:16px;">
+        <p style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">💳 Payment Details</p>
+        <table style="width:100%;font-size:.87rem;border-collapse:collapse;">
+          <tr><td style="padding:5px 0;color:var(--muted);width:40%;">Method</td><td style="padding:5px 0;font-weight:600;">${payMethod}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">UPI Txn ID</td><td style="padding:5px 0;font-family:monospace;">${c.upiTxnId||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">Total</td><td style="padding:5px 0;font-weight:800;font-size:1rem;">${formatPrice(o.total)}</td></tr>
+        </table>
+      </div>
+
+      <!-- Order Info -->
+      <div style="background:var(--bg);border-radius:10px;padding:16px;">
+        <p style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🧾 Order Info</p>
+        <table style="width:100%;font-size:.87rem;border-collapse:collapse;">
+          <tr><td style="padding:5px 0;color:var(--muted);width:40%;">Order ID</td><td style="padding:5px 0;font-family:monospace;font-size:.78rem;">${o.id}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">Date</td><td style="padding:5px 0;">${new Date(o.date).toLocaleString('en-IN')}</td></tr>
+          <tr><td style="padding:5px 0;color:var(--muted);">Status</td><td style="padding:5px 0;"><span class="badge ${STATUS_COLORS[o.status]||'badge-blue'}">${STATUS_ICONS[o.status]} ${o.status}</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Items ordered -->
+    <div style="background:var(--bg);border-radius:10px;padding:16px;">
+      <p style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🛍️ Items Ordered</p>
+      <table style="width:100%;border-collapse:collapse;font-size:.87rem;">
+        <thead><tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:8px 10px;text-align:left;">Product</th>
+          <th style="padding:8px 10px;text-align:left;">Size</th>
+          <th style="padding:8px 10px;text-align:center;">Qty</th>
+          <th style="padding:8px 10px;text-align:right;">Amount</th>
+        </tr></thead>
+        <tbody>${itemRows}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--border);">
+          <td colspan="3" style="padding:10px;font-weight:700;text-align:right;">Total</td>
+          <td style="padding:10px;font-weight:800;font-size:1rem;text-align:right;">${formatPrice(o.total)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  `;
+
+  // Populate status selector in modal footer
+  const sel = document.getElementById('orderDetailStatusSel');
+  sel.innerHTML = ORDER_STATUSES.map(s =>
+    `<option value="${s}" ${o.status===s?'selected':''}>${STATUS_ICONS[s]} ${s}</option>`).join('');
+
+  openModal('orderDetailModal');
+}
+
+function applyOrderDetailStatus() {
+  if (!_currentDetailOrderId) return;
+  const newStatus = document.getElementById('orderDetailStatusSel').value;
+  updateOrderStatus(_currentDetailOrderId, newStatus);
+  // Update the status badge inside the open modal without closing it
+  openOrderDetail(_currentDetailOrderId);
 }
 
 // ── Analytics ────────────────────────────────────────────────────

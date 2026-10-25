@@ -305,6 +305,25 @@
   </div>
 </div>
 
+<!-- Order Detail Modal -->
+<div class="modal-backdrop" id="orderDetailModal">
+  <div class="modal-panel" style="max-width:600px;">
+    <div class="modal-head">
+      <h3>📋 Order Details</h3>
+      <button onclick="closeModal('orderDetailModal')" style="font-size:1.4rem;">✕</button>
+    </div>
+    <div class="modal-body" id="orderDetailBody"></div>
+    <div class="modal-foot">
+      <div style="display:flex;gap:8px;align-items:center;flex:1;">
+        <label style="font-size:.85rem;font-weight:600;">Update Status:</label>
+        <select id="orderDetailStatusSel" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;flex:1;"></select>
+        <button class="btn btn-primary btn-sm" onclick="applyOrderDetailStatus()">✅ Update</button>
+      </div>
+      <button class="btn btn-sm" onclick="closeModal('orderDetailModal')" style="margin-left:8px;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm Delete Modal -->
 <div class="modal-backdrop" id="confirmModal">
   <div class="modal-panel" style="max-width:420px;">
