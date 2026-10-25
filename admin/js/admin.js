@@ -1,4 +1,4 @@
-// ── admin.js – Admin Portal Logic ──────────────────────────────
+// ── admin.js – Admin Portal Logic v2 ────────────────────────────
 
 // ── Auth ────────────────────────────────────────────────────────
 function doLogin() {
@@ -32,12 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initAdmin() {
   document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  // Only render the active panel (dashboard) on init — all others render lazily on switchPanel
   renderDashboard();
-  renderCollectionsAdmin();
-  renderProductsTable();
-  renderStockManager();
-  renderOrdersTable();
-  populateCollectionFilter();
 }
 
 // ── Panel Navigation ─────────────────────────────────────────────
