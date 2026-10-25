@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Dashboard — Beau L'adresses</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* Layout */
+    .dash-layout { display: flex; min-height: 100vh; background: #f7f8fa; }
+    .dash-sidebar { width: 240px; background: #fff; border-right: 1px solid #e5e5e5; display: flex; flex-direction: column; position: sticky; top: 64px; height: calc(100vh - 64px); }
+    .dash-main { flex: 1; padding: 32px; max-width: 900px; }
+
+    /* Sidebar nav */
+    .dash-user-card { padding: 24px 20px 16px; border-bottom: 1px solid #f0f0f0; }
+    .dash-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#e8b4b8,#c9848a); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .dash-user-name { font-weight: 700; font-size: .95rem; }
+    .dash-user-email { font-size: .78rem; color: #888; margin-top: 2px; }
+    .dash-nav { padding: 12px 0; flex: 1; }
+    .dash-nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; font-size: .88rem; font-weight: 500; color: #666; cursor: pointer; transition: all .15s; border-left: 3px solid transparent; }
+    .dash-nav-item:hover { background: #f7f8fa; color: #0d0d0d; }
+    .dash-nav-item.active { background: #fdf2f4; color: #c9848a; border-left-color: #c9848a; font-weight: 700; }
+    .dash-nav-item .ni { font-size: 1.1rem; width: 22px; text-align: center; }
+    .dash-footer-nav { padding: 16px 20px; border-top: 1px solid #f0f0f0; display: flex; flex-direction: column; gap: 10px; }
+    .dash-footer-nav a { font-size: .83rem; color: #888; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .dash-footer-nav a:hover { color: #c9848a; }
+
+    /* Panels */
+    .dash-panel { display: none; }
+    .dash-panel.active { display: block; }
+    .panel-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
+    .panel-sub { color: #888; font-size: .88rem; margin-bottom: 24px; }
+
+    /* Cards */
+    .white-card { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 1px 8px rgba(0,0,0,.07); margin-bottom: 20px; }
+    .white-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* Stats row */
+    .dash-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+    .dash-stat { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 1px 8px rgba(0,0,0,.07); text-align: center; }
+    .dash-stat .ds-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .dash-stat .ds-val { font-size: 1.5rem; font-weight: 800; }
+    .dash-stat .ds-lbl { font-size: .78rem; color: #888; margin-top: 4px; }
+
+    /* Order cards */
+    .order-mini { border: 1px solid #f0f0f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; transition: border-color .2s; }
+    .order-mini:hover { border-color: #c9848a; }
+    .order-mini-id { font-family: monospace; font-size: .78rem; color: #888; }
+    .order-mini-name { font-weight: 600; font-size: .92rem; }
+    .order-mini-date { font-size: .8rem; color: #888; }
+    .order-mini-total { font-weight: 800; font-size: .95rem; }
+    .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
+    .s-confirmed  { background: #dbeafe; color: #1d4ed8; }
+    .s-processing { background: #fef3c7; color: #92400e; }
+    .s-shipped    { background: #e0f2fe; color: #0369a1; }
+    .s-delivered  { background: #dcfce7; color: #15803d; }
+    .s-cancelled  { background: #fee2e2; color: #b91c1c; }
+
+    /* Status tracker mini */
+    .track-mini { display: flex; gap: 4px; align-items: center; margin-top: 8px; }
+    .track-dot-mini { width: 10px; height: 10px; border-radius: 50%; background: #e5e5e5; }
+    .track-dot-mini.done { background: #16a34a; }
+    .track-dot-mini.active { background: #0d0d0d; box-shadow: 0 0 0 3px rgba(13,13,13,.15); }
+    .track-dot-mini.cancelled { background: #dc2626; }
+    .track-line { flex: 1; height: 2px; background: #e5e5e5; border-radius: 1px; }
+    .track-line.done { background: #16a34a; }
+
+    /* Wishlist grid */
+    .wish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 14px; }
+    .wish-card { border-radius: 12px; overflow: hidden; border: 1px solid #f0f0f0; background: #fff; position: relative; }
+    .wish-card img { width: 100%; height: 160px; object-fit: cover; }
+    .wish-card-body { padding: 10px 12px; }
+    .wish-card-name { font-size: .85rem; font-weight: 600; margin-bottom: 4px; }
+    .wish-card-price { font-size: .9rem; font-weight: 800; }
+    .wish-remove { position: absolute; top: 8px; right: 8px; background: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .85rem; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+
+    /* Profile form */
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .fld { margin-bottom: 0; }
+    .fld label { display: block; font-size: .82rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .fld input { width: 100%; padding: 11px 14px; border: 2px solid #e5e5e5; border-radius: 10px; font-size: .92rem; transition: border-color .2s; }
+    .fld input:focus { outline: none; border-color: #0d0d0d; }
+    .save-btn { background: #0d0d0d; color: #fff; border: none; padding: 12px 28px; border-radius: 50px; font-size: .9rem; font-weight: 700; cursor: pointer; margin-top: 20px; }
+    .save-btn:hover { background: #333; }
+    .danger-btn { background: #fee2e2; color: #dc2626; border: none; padding: 10px 20px; border-radius: 50px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .danger-btn:hover { background: #dc2626; color: #fff; }
+
+    /* Address cards */
+    .addr-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 14px; margin-bottom: 16px; }
+    .addr-card { border: 2px solid #f0f0f0; border-radius: 12px; padding: 16px; position: relative; }
+    .addr-card.default-addr { border-color: #c9848a; }
+    .addr-card-name { font-weight: 700; font-size: .92rem; margin-bottom: 4px; }
+    .addr-card p { font-size: .83rem; color: #555; line-height: 1.5; }
+    .addr-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .addr-def-badge { position: absolute; top: 10px; right: 10px; background: #fce7f3; color: #c9848a; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 50px; }
+
+    /* Inline msg */
+    .inline-ok  { color: #16a34a; font-size: .83rem; padding: 8px 14px; background: #dcfce7; border-radius: 8px; margin-top: 10px; display: none; }
+    .inline-err { color: #dc2626; font-size: .83rem; padding: 8px 14px; background: #fee2e2; border-radius: 8px; margin-top: 10px; display: none; }
+
+    /* Empty state */
+    .empty-mini { text-align: center; padding: 32px 20px; color: #888; }
+    .empty-mini .ei { font-size: 2.5rem; margin-bottom: 8px; }
+
+    @media(max-width:768px) {
+      .dash-layout { flex-direction: column; }
+      .dash-sidebar { width: 100%; height: auto; position: static; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid #e5e5e5; }
+      .dash-nav { display: flex; flex-direction: row; padding: 8px; gap: 4px; }
+      .dash-nav-item { flex-direction: column; gap: 3px; padding: 8px 12px; font-size: .74rem; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+      .dash-nav-item.active { border-left: none; border-bottom-color: #c9848a; }
+      .dash-user-card, .dash-footer-nav { display: none; }
+      .dash-main { padding: 20px 16px; }
+      .dash-stats { grid-template-columns: repeat(3,1fr); }
+      .profile-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="container nav-inner">
+    <a href="index.html" class="nav-logo">Beau <span>L'adresses</span></a>
+    <div class="nav-links">
+      <a href="index.html#shop">Shop</a>
+      <a href="orders.html">My Orders</a>
+      <a href="dashboard.html" style="color:#c9848a;font-weight:700;">Dashboard</a>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-icon-btn" onclick="window.location.href='index.html'" title="Shop">🛍️</button>
+      <button class="btn btn-outline" style="font-size:.82rem;padding:7px 16px;" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </div>
+</nav>
+
+<div class="dash-layout">
+
+  <!-- Sidebar -->
+  <aside class="dash-sidebar">
+    <div class="dash-user-card">
+      <div class="dash-avatar" id="sidebarAvatar">?</div>
+      <div class="dash-user-name" id="sidebarName">Loading…</div>
+      <div class="dash-user-email" id="sidebarEmail"></div>
+    </div>
+    <nav class="dash-nav">
+      <div class="dash-nav-item active" onclick="showPanel('overview',this)"><span class="ni">🏠</span>Overview</div>
+      <div class="dash-nav-item" onclick="showPanel('orders',this)"><span class="ni">📦</span>My Orders</div>
+      <div class="dash-nav-item" onclick="showPanel('wishlist',this)"><span class="ni">❤️</span>Wishlist</div>
+      <div class="dash-nav-item" onclick="showPanel('addresses',this)"><span class="ni">📍</span>Addresses</div>
+      <div class="dash-nav-item" onclick="showPanel('profile',this)"><span class="ni">👤</span>Profile</div>
+      <div class="dash-nav-item" onclick="showPanel('security',this)"><span class="ni">🔐</span>Security</div>
+    </nav>
+    <div class="dash-footer-nav">
+      <a href="index.html">🛍️ Back to Store</a>
+      <a href="#" onclick="handleLogout()">🚪 Sign Out</a>
+    </div>
+  </aside>
+
+  <!-- Main panels -->
+  <main class="dash-main">
+
+    <!-- OVERVIEW -->
+    <div class="dash-panel active" id="panel-overview">
+      <h1 class="panel-title" id="overviewGreeting">Welcome!</h1>
+      <p class="panel-sub">Here's a summary of your account.</p>
+      <div class="dash-stats" id="overviewStats"></div>
+      <div class="white-card">
+        <h3>📦 Recent Orders</h3>
+        <div id="recentOrdersMini"></div>
+        <a href="#" onclick="showPanel('orders',document.querySelectorAll('.dash-nav-item')[1]);return false;" style="font-size:.85rem;color:#c9848a;font-weight:700;text-decoration:none;">View all orders →</a>
+      </div>
+      <div class="white-card" id="wishlistPreviewCard">
+        <h3>❤️ Wishlist Preview</h3>
+        <div id="wishlistPreview"></div>
+      </div>
+    </div>
+
+    <!-- MY ORDERS -->
+    <div class="dash-panel" id="panel-orders">
+      <h1 class="panel-title">My Orders</h1>
+      <p class="panel-sub">Track all your orders and delivery status.</p>
+      <div id="allOrdersList"></div>
+    </div>
+
+    <!-- WISHLIST -->
+    <div class="dash-panel" id="panel-wishlist">
+      <h1 class="panel-title">My Wishlist</h1>
+      <p class="panel-sub">Items you've saved for later.</p>
+      <div class="wish-grid" id="wishlistGrid"></div>
+    </div>
+
+    <!-- ADDRESSES -->
+    <div class="dash-panel" id="panel-addresses">
+      <h1 class="panel-title">Saved Addresses</h1>
+      <p class="panel-sub">Manage your delivery addresses.</p>
+      <div class="addr-grid" id="addrGrid"></div>
+      <div class="white-card">
+        <h3>➕ Add New Address</h3>
+        <div class="profile-grid">
+          <div class="fld"><label>Full Name *</label><input type="text" id="addrName"/></div>
+          <div class="fld"><label>Phone *</label><input type="tel" id="addrPhone"/></div>
+          <div class="fld" style="grid-column:1/-1"><label>Street Address *</label><input type="text" id="addrStreet"/></div>
+          <div class="fld"><label>City *</label><input type="text" id="addrCity"/></div>
+          <div class="fld"><label>PIN Code *</label><input type="text" id="addrPin"/></div>
+          <div class="fld"><label>State *</label><input type="text" id="addrState"/></div>
+          <div class="fld"><label>Type</label>
+            <input type="text" id="addrType" placeholder="Home / Work / Other"/>
+          </div>
+        </div>
+        <button class="save-btn" onclick="addAddress()">Save Address</button>
+        <div class="inline-ok" id="addrOk">✅ Address saved!</div>
+        <div class="inline-err" id="addrErr"></div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="dash-panel" id="panel-profile">
+      <h1 class="panel-title">My Profile</h1>
+      <p class="panel-sub">Update your personal information.</p>
+      <div class="white-card">
+        <h3>👤 Personal Details</h3>
+        <div class="profile-grid">
+          <div class="fld"><label>Full Name *</label><input type="text" id="profName"/></div>
+          <div class="fld"><label>Phone</label><input type="tel" id="profPhone"/></div>
+          <div class="fld" style="grid-column:1/-1"><label>Email Address</label><input type="email" id="profEmail" readonly style="background:#f7f8fa;color:#888;cursor:not-allowed;"/></div>
+        </div>
+        <button class="save-btn" onclick="saveProfile()">💾 Save Changes</button>
+        <div class="inline-ok" id="profileOk">✅ Profile updated!</div>
+        <div class="inline-err" id="profileErr"></div>
+      </div>
+    </div>
+
+    <!-- SECURITY -->
+    <div class="dash-panel" id="panel-security">
+      <h1 class="panel-title">Security</h1>
+      <p class="panel-sub">Manage your password and account security.</p>
+      <div class="white-card">
+        <h3>🔐 Change Password</h3>
+        <div style="max-width:400px;display:flex;flex-direction:column;gap:14px;">
+          <div class="fld"><label>Current Password</label><input type="password" id="secCurrent" placeholder="Current password"/></div>
+          <div class="fld"><label>New Password</label><input type="password" id="secNew" placeholder="New password (min 6 chars)"/></div>
+          <div class="fld"><label>Confirm New Password</label><input type="password" id="secConfirm" placeholder="Repeat new password"/></div>
+        </div>
+        <button class="save-btn" onclick="changeUserPassword()">🔐 Update Password</button>
+        <div class="inline-ok" id="secOk">✅ Password changed successfully!</div>
+        <div class="inline-err" id="secErr"></div>
+      </div>
+      <div class="white-card" style="border:2px solid #fee2e2;margin-top:0;">
+        <h3 style="color:#dc2626;">⚠️ Danger Zone</h3>
+        <p style="font-size:.88rem;color:#555;margin-bottom:16px;">Permanently delete your account and all associated data.</p>
+        <button class="danger-btn" onclick="confirmDeleteAccount()">🗑 Delete My Account</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="js/data.js"></script>
+<script>
+  // ── Guard: redirect to login if not logged in ──────────────────
+  var user = getCurrentUser();
+  if (!user) window.location.href = 'login.html?redirect=dashboard.html';
+
+  var fullUser = getFullUser(user.id);
+
+  // ── Init sidebar ──────────────────────────────────────────────
+  function initSidebar() {
+    user = getCurrentUser();
+    fullUser = getFullUser(user.id);
+    document.getElementById('sidebarAvatar').textContent = user.name.charAt(0).toUpperCase();
+    document.getElementById('sidebarName').textContent   = user.name;
+    document.getElementById('sidebarEmail').textContent  = user.email;
+  }
+
+  // ── Panel switcher ────────────────────────────────────────────
+  function showPanel(name, el) {
+    document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.dash-nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    if (el) el.classList.add('active');
+    if (name === 'overview')   renderOverview();
+    if (name === 'orders')     renderOrders();
+    if (name === 'wishlist')   renderWishlist();
+    if (name === 'addresses')  renderAddresses();
+    if (name === 'profile')    renderProfile();
+    if (name === 'security')   {}
+  }
+
+  // ── OVERVIEW ─────────────────────────────────────────────────
+  function renderOverview() {
+    user = getCurrentUser(); fullUser = getFullUser(user.id);
+    document.getElementById('overviewGreeting').textContent = 'Welcome back, ' + user.name.split(' ')[0] + '! 👋';
+    const myOrders = getUserOrders(user.id);
+    const wishCount = (fullUser.wishlist||[]).length;
+    const spent = myOrders.reduce((s,o) => s+o.total,0);
+    document.getElementById('overviewStats').innerHTML = `
+      <div class="dash-stat"><div class="ds-icon">📦</div><div class="ds-val">${myOrders.length}</div><div class="ds-lbl">Orders</div></div>
+      <div class="dash-stat"><div class="ds-icon">❤️</div><div class="ds-val">${wishCount}</div><div class="ds-lbl">Wishlist</div></div>
+      <div class="dash-stat"><div class="ds-icon">💰</div><div class="ds-val">${formatPrice(spent)}</div><div class="ds-lbl">Total Spent</div></div>
+    `;
+    // Recent orders
+    const recent = myOrders.slice(0,3);
+    const ordEl = document.getElementById('recentOrdersMini');
+    if (!recent.length) {
+      ordEl.innerHTML = '<div class="empty-mini"><div class="ei">📦</div><p>No orders yet. <a href="index.html#shop" style="color:#c9848a;font-weight:700;">Start shopping →</a></p></div>';
+    } else {
+      ordEl.innerHTML = recent.map(o => buildOrderMini(o)).join('');
+    }
+    // Wishlist preview
+    const wl = (fullUser.wishlist||[]).slice(0,4);
+    const db = getDB();
+    const wlEl = document.getElementById('wishlistPreview');
+    if (!wl.length) {
+      wlEl.innerHTML = '<p style="color:#888;font-size:.88rem;">No items in your wishlist yet.</p>';
+    } else {
+      wlEl.innerHTML = '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+        wl.map(pid => {
+          const p = db.products.find(x => x.id === pid);
+          return p ? `<div style="text-align:center;"><img src="${p.image}" style="width:70px;height:70px;object-fit:cover;border-radius:10px;"/><p style="font-size:.75rem;font-weight:600;margin-top:4px;max-width:70px;">${p.name}</p></div>` : '';
+        }).join('') + '</div>';
+    }
+  }
+
+  // ── ORDERS ───────────────────────────────────────────────────
+  const STEPS = ['Confirmed','Processing','Shipped','Delivered'];
+  const SICONS = { Confirmed:'📋', Processing:'⚙️', Shipped:'🚚', Delivered:'✅', Cancelled:'❌' };
+  const SCLS   = { Confirmed:'s-confirmed', Processing:'s-processing', Shipped:'s-shipped', Delivered:'s-delivered', Cancelled:'s-cancelled' };
+
+  function buildOrderMini(o) {
+    const db = getDB();
+    const isCan = o.status === 'Cancelled';
+    const step  = STEPS.indexOf(o.status);
+    const trackDots = STEPS.map((s,i) => {
+      const cls = isCan ? 'cancelled' : i < step ? 'done' : i === step ? 'active' : '';
+      return (i > 0 ? `<div class="track-line ${i <= step && !isCan ? 'done':''}"></div>` : '') +
+             `<div class="track-dot-mini ${cls}" title="${s}"></div>`;
+    }).join('');
+    const items = (o.items||[]).map(it => {
+      const p = db.products.find(x => x.id === it.productId);
+      return p ? p.name + ' ×' + it.qty : '';
+    }).filter(Boolean).join(', ');
+    return `
+    <div class="order-mini" onclick="window.location.href='orders.html'" style="cursor:pointer;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="order-mini-id">${o.id}</span>
+          <span class="status-pill ${SCLS[o.status]}">${SICONS[o.status]} ${o.status}</span>
+        </div>
+        <div class="order-mini-name" style="margin-top:4px;">${items || 'Order items'}</div>
+        <div class="track-mini" style="margin-top:8px;">${isCan ? '<span style="color:#dc2626;font-size:.78rem;">❌ Cancelled</span>' : trackDots}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="order-mini-total">${formatPrice(o.total)}</div>
+        <div class="order-mini-date">${new Date(o.date).toLocaleDateString('en-IN')}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderOrders() {
+    user = getCurrentUser();
+    const myOrders = getUserOrders(user.id);
+    const el = document.getElementById('allOrdersList');
+    if (!myOrders.length) {
+      el.innerHTML = '<div class="empty-mini"><div class="ei">📦</div><h3>No orders yet</h3><p style="margin:8px 0 16px;">Browse our collections and place your first order!</p><a href="index.html#shop" class="btn btn-primary">Shop Now →</a></div>';
+      return;
+    }
+    el.innerHTML = myOrders.map(o => buildOrderMini(o)).join('');
+  }
+
+  // ── WISHLIST ─────────────────────────────────────────────────
+  function renderWishlist() {
+    user = getCurrentUser(); fullUser = getFullUser(user.id);
+    const wl = fullUser.wishlist || [];
+    const db = getDB();
+    const el = document.getElementById('wishlistGrid');
+    if (!wl.length) {
+      el.innerHTML = '<div class="empty-mini" style="grid-column:1/-1"><div class="ei">❤️</div><h3>Your wishlist is empty</h3><p style="margin:8px 0 16px;">Tap ❤️ on any product to save it here.</p><a href="index.html#shop" class="btn btn-primary">Shop Now →</a></div>';
+      return;
+    }
+    el.innerHTML = wl.map(pid => {
+      const p = db.products.find(x => x.id === pid);
+      if (!p) return '';
+      return `
+      <div class="wish-card">
+        <img src="${p.image}" alt="${p.name}" onclick="window.location.href='index.html#shop'" style="cursor:pointer;"/>
+        <button class="wish-remove" onclick="removeWish('${p.id}')" title="Remove">✕</button>
+        <div class="wish-card-body">
+          <div class="wish-card-name">${p.name}</div>
+          <div class="wish-card-price">${formatPrice(p.price)}</div>
+          <button style="width:100%;margin-top:8px;padding:7px;background:#0d0d0d;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;" onclick="addWishToCart('${p.id}')">+ Add to Bag</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function removeWish(pid) {
+    toggleWishlist(pid);
+    renderWishlist();
+    showToast('Removed from wishlist');
+  }
+
+  function addWishToCart(pid) {
+    const p = getProductById(pid);
+    if (!p || p.stock === 0) { showToast('⚠ Out of stock'); return; }
+    addToCart(pid, p.sizes[0]);
+    showToast('✅ Added to bag!');
+  }
+
+  // ── ADDRESSES ────────────────────────────────────────────────
+  function renderAddresses() {
+    user = getCurrentUser(); fullUser = getFullUser(user.id);
+    const addrs = fullUser.addresses || [];
+    const el = document.getElementById('addrGrid');
+    if (!addrs.length) {
+      el.innerHTML = '<p style="color:#888;font-size:.88rem;margin-bottom:16px;">No saved addresses yet. Add one below.</p>';
+      return;
+    }
+    el.innerHTML = addrs.map((a,i) => `
+      <div class="addr-card ${i===0?'default-addr':''}">
+        ${i===0 ? '<span class="addr-def-badge">Default</span>' : ''}
+        <div class="addr-card-name">${a.name}</div>
+        <p>${a.street}<br/>${a.city} - ${a.pin}<br/>${a.state}</p>
+        <p style="margin-top:4px;font-size:.8rem;color:#888;">📞 ${a.phone} &nbsp; ${a.type||''}</p>
+        <div class="addr-actions">
+          <button style="padding:5px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;" onclick="removeAddress(${i})">🗑 Remove</button>
+          ${i!==0?`<button style="padding:5px 12px;background:#f0fdf4;color:#16a34a;border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;" onclick="setDefaultAddress(${i})">Set Default</button>`:''}
+        </div>
+      </div>`).join('');
+  }
+
+  function addAddress() {
+    const name   = document.getElementById('addrName').value.trim();
+    const phone  = document.getElementById('addrPhone').value.trim();
+    const street = document.getElementById('addrStreet').value.trim();
+    const city   = document.getElementById('addrCity').value.trim();
+    const pin    = document.getElementById('addrPin').value.trim();
+    const state  = document.getElementById('addrState').value.trim();
+    const type   = document.getElementById('addrType').value.trim();
+    if (!name||!phone||!street||!city||!pin||!state) {
+      showInline('addrErr','Please fill in all required fields.'); return;
+    }
+    updateDB(db => {
+      const u = db.users.find(x => x.id === user.id);
+      if (!u.addresses) u.addresses = [];
+      u.addresses.push({name,phone,street,city,pin,state,type});
+    });
+    fullUser = getFullUser(user.id);
+    ['addrName','addrPhone','addrStreet','addrCity','addrPin','addrState','addrType'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('addrOk').style.display='block';
+    setTimeout(() => document.getElementById('addrOk').style.display='none', 2500);
+    hideInline('addrErr');
+    renderAddresses();
+  }
+
+  function removeAddress(idx) {
+    updateDB(db => { const u = db.users.find(x => x.id === user.id); u.addresses.splice(idx,1); });
+    fullUser = getFullUser(user.id); renderAddresses();
+    showToast('Address removed');
+  }
+
+  function setDefaultAddress(idx) {
+    updateDB(db => {
+      const u = db.users.find(x => x.id === user.id);
+      const addr = u.addresses.splice(idx,1)[0];
+      u.addresses.unshift(addr);
+    });
+    fullUser = getFullUser(user.id); renderAddresses();
+    showToast('✅ Default address updated');
+  }
+
+  // ── PROFILE ───────────────────────────────────────────────────
+  function renderProfile() {
+    user = getCurrentUser(); fullUser = getFullUser(user.id);
+    document.getElementById('profName').value  = fullUser.name  || '';
+    document.getElementById('profPhone').value = fullUser.phone || '';
+    document.getElementById('profEmail').value = fullUser.email || '';
+  }
+
+  function saveProfile() {
+    const name  = document.getElementById('profName').value.trim();
+    const phone = document.getElementById('profPhone').value.trim();
+    if (!name) { showInline('profileErr','Name cannot be empty.'); return; }
+    updateUserProfile(user.id, {name, phone});
+    user = getCurrentUser(); fullUser = getFullUser(user.id);
+    initSidebar();
+    document.getElementById('profileOk').style.display='block';
+    setTimeout(() => document.getElementById('profileOk').style.display='none', 2500);
+    hideInline('profileErr');
+  }
+
+  // ── SECURITY ──────────────────────────────────────────────────
+  function changeUserPassword() {
+    const curr = document.getElementById('secCurrent').value;
+    const nw   = document.getElementById('secNew').value;
+    const conf = document.getElementById('secConfirm').value;
+    fullUser = getFullUser(user.id);
+    if (curr !== fullUser.password) { showInline('secErr','Current password is incorrect.'); return; }
+    if (nw.length < 6) { showInline('secErr','New password must be at least 6 characters.'); return; }
+    if (nw !== conf)   { showInline('secErr','Passwords do not match.'); return; }
+    updateDB(db => { const u = db.users.find(x => x.id === user.id); if(u) u.password = nw; });
+    ['secCurrent','secNew','secConfirm'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('secOk').style.display='block';
+    setTimeout(() => document.getElementById('secOk').style.display='none', 2500);
+    hideInline('secErr');
+  }
+
+  function confirmDeleteAccount() {
+    if (!confirm('Are you sure? This will permanently delete your account and all your data.')) return;
+    updateDB(db => { db.users = db.users.filter(u => u.id !== user.id); });
+    logoutUser();
+    window.location.href = 'index.html';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function handleLogout() { logoutUser(); window.location.href = 'index.html'; }
+
+  function showInline(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = '❌ ' + msg; el.style.display = 'block';
+  }
+  function hideInline(id) { document.getElementById(id).style.display = 'none'; }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    initSidebar();
+    renderOverview();
+  });
+</script>
+</body>
+</html>

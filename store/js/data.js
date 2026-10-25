@@ -28,6 +28,8 @@ const defaultData = {
   ],
   orders: [],
   cart: [],
+  users: [],
+  wishlist: [],
   adminPassword: 'admin123'
 };
 
@@ -102,11 +104,13 @@ function getCartTotal() {
 // Orders
 function placeOrder(customerInfo) {
   const db = getDB();
+  const currentUser = getCurrentUser();
   const order = {
     id: 'ORD' + Date.now(),
     items: db.cart.map(i => ({ ...i })),
     total: getCartTotal(),
     customer: customerInfo,
+    userId: currentUser ? currentUser.id : null,
     status: 'Confirmed',
     date: new Date().toISOString()
   };
@@ -129,4 +133,96 @@ function formatPrice(paise) {
 
 function generateId(prefix) {
   return prefix + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// ── User Auth ────────────────────────────────────────────────────
+const USER_SESSION_KEY = 'ba_user_session';
+
+function registerUser(name, email, password, phone) {
+  const db = getDB();
+  if (!db.users) db.users = [];
+  if (db.users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    return { error: 'An account with this email already exists.' };
+  }
+  const user = {
+    id: generateId('usr'),
+    name: name.trim(),
+    email: email.toLowerCase().trim(),
+    password: password,
+    phone: phone || '',
+    createdAt: new Date().toISOString(),
+    addresses: [],
+    wishlist: []
+  };
+  updateDB(d => { if (!d.users) d.users = []; d.users.push(user); });
+  sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify({ id: user.id, name: user.name, email: user.email }));
+  return { user };
+}
+
+function loginUser(email, password) {
+  const db = getDB();
+  if (!db.users) return { error: 'No account found.' };
+  const user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+  if (!user) return { error: 'Incorrect email or password.' };
+  sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify({ id: user.id, name: user.name, email: user.email }));
+  return { user };
+}
+
+function logoutUser() {
+  sessionStorage.removeItem(USER_SESSION_KEY);
+}
+
+function getCurrentUser() {
+  try {
+    const s = sessionStorage.getItem(USER_SESSION_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch(e) { return null; }
+}
+
+function getFullUser(id) {
+  return getDB().users.find(u => u.id === id);
+}
+
+function updateUserProfile(id, data) {
+  updateDB(db => {
+    const u = db.users.find(x => x.id === id);
+    if (u) Object.assign(u, data);
+  });
+  const sess = getCurrentUser();
+  if (sess) {
+    const updated = getFullUser(id);
+    sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify({ id: updated.id, name: updated.name, email: updated.email }));
+  }
+}
+
+function getUserOrders(userId) {
+  const db = getDB();
+  return db.orders.filter(o => o.userId === userId).reverse();
+}
+
+// ── Wishlist ────────────────────────────────────────────────────
+function getWishlist() {
+  const u = getCurrentUser();
+  if (!u) return [];
+  const full = getFullUser(u.id);
+  return full ? (full.wishlist || []) : [];
+}
+
+function toggleWishlist(productId) {
+  const u = getCurrentUser();
+  if (!u) return false;
+  let added = false;
+  updateDB(db => {
+    const user = db.users.find(x => x.id === u.id);
+    if (!user) return;
+    if (!user.wishlist) user.wishlist = [];
+    const idx = user.wishlist.indexOf(productId);
+    if (idx > -1) { user.wishlist.splice(idx, 1); added = false; }
+    else { user.wishlist.push(productId); added = true; }
+  });
+  return added;
+}
+
+function isWishlisted(productId) {
+  return getWishlist().includes(productId);
 }

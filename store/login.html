@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — Beau L'adresses</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .auth-page { min-height: 100vh; background: linear-gradient(135deg,#fdf2f4 0%,#f0e8ff 100%); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .auth-card { background: #fff; border-radius: 20px; padding: 44px 40px; width: 420px; max-width: 100%; box-shadow: 0 8px 40px rgba(0,0,0,.12); }
+    .auth-logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .auth-logo span { color: #c9848a; }
+    .auth-sub { color: #888; font-size: .85rem; margin-bottom: 28px; }
+    .tab-row { display: flex; gap: 0; margin-bottom: 28px; border: 2px solid #e5e5e5; border-radius: 10px; overflow: hidden; }
+    .tab-btn { flex: 1; padding: 11px; font-size: .9rem; font-weight: 700; border: none; background: none; cursor: pointer; transition: all .2s; color: #888; }
+    .tab-btn.active { background: #0d0d0d; color: #fff; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .fld { margin-bottom: 16px; }
+    .fld label { display: block; font-size: .82rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .fld input { width: 100%; padding: 12px 14px; border: 2px solid #e5e5e5; border-radius: 10px; font-size: .95rem; transition: border-color .2s; }
+    .fld input:focus { outline: none; border-color: #0d0d0d; }
+    .auth-btn { width: 100%; padding: 14px; background: #0d0d0d; color: #fff; border: none; border-radius: 50px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background .2s; }
+    .auth-btn:hover { background: #333; }
+    .auth-err { color: #dc2626; font-size: .83rem; margin-top: 10px; display: none; padding: 10px 14px; background: #fee2e2; border-radius: 8px; }
+    .auth-ok  { color: #16a34a; font-size: .83rem; margin-top: 10px; display: none; padding: 10px 14px; background: #dcfce7; border-radius: 8px; }
+    .divider { text-align: center; color: #aaa; font-size: .82rem; margin: 16px 0; position: relative; }
+    .divider::before { content:''; position:absolute; left:0; top:50%; width:42%; height:1px; background:#e5e5e5; }
+    .divider::after  { content:''; position:absolute; right:0; top:50%; width:42%; height:1px; background:#e5e5e5; }
+    .back-link { text-align: center; margin-top: 20px; font-size: .85rem; color: #888; }
+    .back-link a { color: #c9848a; font-weight: 700; text-decoration: none; }
+    .strength-bar { height: 4px; border-radius: 2px; margin-top: 6px; background: #e5e5e5; overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width .3s, background .3s; width: 0; }
+  </style>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">Beau <span>L'adresses</span></div>
+    <p class="auth-sub">Sign in to your account or create a new one</p>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabLogin" onclick="showTab('login')">Sign In</button>
+      <button class="tab-btn" id="tabRegister" onclick="showTab('register')">Create Account</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="auth-form active" id="formLogin">
+      <div class="fld">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="you@email.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="fld">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="auth-btn" onclick="doLogin()">Sign In →</button>
+      <div class="auth-err" id="loginErr"></div>
+      <div class="divider">or</div>
+      <button class="auth-btn" style="background:#f9f9f9;color:#0d0d0d;border:2px solid #e5e5e5;" onclick="showTab('register')">Create a New Account</button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="auth-form" id="formRegister">
+      <div class="fld">
+        <label>Full Name *</label>
+        <input type="text" id="regName" placeholder="Your full name"/>
+      </div>
+      <div class="fld">
+        <label>Email Address *</label>
+        <input type="email" id="regEmail" placeholder="you@email.com"/>
+      </div>
+      <div class="fld">
+        <label>Phone Number</label>
+        <input type="tel" id="regPhone" placeholder="+91 98765 43210"/>
+      </div>
+      <div class="fld">
+        <label>Password *</label>
+        <input type="password" id="regPassword" placeholder="Min 6 characters" oninput="checkStrength(this.value)"/>
+        <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+      </div>
+      <div class="fld">
+        <label>Confirm Password *</label>
+        <input type="password" id="regConfirm" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doRegister()"/>
+      </div>
+      <button class="auth-btn" onclick="doRegister()">Create Account →</button>
+      <div class="auth-err" id="regErr"></div>
+      <div class="auth-ok"  id="regOk"></div>
+    </div>
+
+    <div class="back-link">
+      <a href="index.html">← Back to Store</a>
+      &nbsp;·&nbsp;
+      <a href="dashboard.html">My Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script>
+  // Redirect if already logged in
+  if (getCurrentUser()) window.location.href = 'dashboard.html';
+
+  function showTab(tab) {
+    document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+    document.getElementById('formLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('formRegister').classList.toggle('active', tab === 'register');
+    hideMsg('loginErr'); hideMsg('regErr'); hideMsg('regOk');
+  }
+
+  function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPassword').value;
+    if (!email || !pass) { showErr('loginErr', 'Please fill in all fields.'); return; }
+    const result = loginUser(email, pass);
+    if (result.error) { showErr('loginErr', result.error); return; }
+    const redirect = new URLSearchParams(window.location.search).get('redirect') || 'dashboard.html';
+    window.location.href = redirect;
+  }
+
+  function doRegister() {
+    const name    = document.getElementById('regName').value.trim();
+    const email   = document.getElementById('regEmail').value.trim();
+    const phone   = document.getElementById('regPhone').value.trim();
+    const pass    = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirm').value;
+    if (!name || !email || !pass) { showErr('regErr', 'Please fill in all required fields.'); return; }
+    if (pass.length < 6)          { showErr('regErr', 'Password must be at least 6 characters.'); return; }
+    if (pass !== confirm)          { showErr('regErr', 'Passwords do not match.'); return; }
+    const result = registerUser(name, email, pass, phone);
+    if (result.error) { showErr('regErr', result.error); return; }
+    hideMsg('regErr');
+    document.getElementById('regOk').textContent = '✅ Account created! Redirecting…';
+    document.getElementById('regOk').style.display = 'block';
+    setTimeout(() => window.location.href = 'dashboard.html', 1200);
+  }
+
+  function checkStrength(val) {
+    const fill = document.getElementById('strengthFill');
+    let score = 0;
+    if (val.length >= 6)  score++;
+    if (val.length >= 10) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const pct   = (score / 5) * 100;
+    const color = score <= 1 ? '#ef4444' : score <= 3 ? '#f59e0b' : '#16a34a';
+    fill.style.width = pct + '%';
+    fill.style.background = color;
+  }
+
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = '❌ ' + msg;
+    el.style.display = 'block';
+  }
+  function hideMsg(id) { document.getElementById(id).style.display = 'none'; }
+</script>
+</body>
+</html>

@@ -6,11 +6,28 @@ let selectedSize = null;
 
 // ── Init ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  renderNavUser();
   renderCollections();
   renderFilterBtns();
   renderProducts();
   renderCart();
 });
+
+// ── Nav user area ────────────────────────────────────────────────
+function renderNavUser() {
+  const area = document.getElementById('navUserArea');
+  if (!area) return;
+  const u = getCurrentUser();
+  if (u) {
+    area.innerHTML = `
+      <a href="dashboard.html" style="display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;color:#0d0d0d;text-decoration:none;padding:7px 14px;border:2px solid #e5e5e5;border-radius:50px;">
+        <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#e8b4b8,#c9848a);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:800;">${u.name.charAt(0).toUpperCase()}</span>
+        ${u.name.split(' ')[0]}
+      </a>`;
+  } else {
+    area.innerHTML = `<a href="login.html" class="btn btn-outline" style="font-size:.82rem;padding:7px 16px;">Sign In</a>`;
+  }
+}
 
 // ── Collections ─────────────────────────────────────────────────
 function renderCollections() {
@@ -56,11 +73,16 @@ function renderProducts() {
   grid.innerHTML = products.map(p => {
     const col = getCollectionById(p.collectionId);
     const oos = p.stock === 0;
+    const wished = isWishlisted(p.id);
     return `
     <div class="product-card" onclick="openModal('${p.id}')">
       <div class="img-wrap">
         <img src="${p.image}" alt="${p.name}" loading="lazy"/>
         ${oos ? '<span class="out-of-stock-ribbon">Out of Stock</span>' : ''}
+        <button onclick="event.stopPropagation();wishlistToggle('${p.id}')" id="wish_${p.id}"
+          style="position:absolute;top:10px;right:10px;background:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;transition:transform .15s;">
+          ${wished ? '❤️' : '🤍'}
+        </button>
       </div>
       <div class="product-info">
         <p class="collection-tag">${col ? col.name : ''}</p>
@@ -72,6 +94,16 @@ function renderProducts() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Wishlist toggle ──────────────────────────────────────────────
+function wishlistToggle(productId) {
+  const u = getCurrentUser();
+  if (!u) { window.location.href = 'login.html?redirect=index.html'; return; }
+  const added = toggleWishlist(productId);
+  const btn = document.getElementById('wish_' + productId);
+  if (btn) btn.textContent = added ? '❤️' : '🤍';
+  showToast(added ? '❤️ Added to wishlist!' : 'Removed from wishlist');
 }
 
 // ── Quick Add (no size selection – picks first available size) ──
