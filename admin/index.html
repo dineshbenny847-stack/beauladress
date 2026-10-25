@@ -53,8 +53,8 @@
       <div class="nav-item" data-panel="stock" onclick="switchPanel('stock',this)">
         <span class="nav-icon">📦</span><span>Stock Manager</span>
       </div>
-      <div class="nav-item" data-panel="orders" onclick="switchPanel('orders',this)">
-        <span class="nav-icon">🧾</span><span>Orders</span>
+      <div class="nav-item" data-panel="orders" onclick="switchPanel('orders',this)" id="navOrders">
+        <span class="nav-icon">🧾</span><span>Orders</span><span id="orderNotifBadge" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:.65rem;font-weight:700;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;flex-shrink:0;">0</span>
       </div>
       <div class="nav-item" data-panel="customers" onclick="switchPanel('customers',this)">
         <span class="nav-icon">👥</span><span>Customers</span>
@@ -133,7 +133,7 @@
         <div class="card-body" style="padding:0;">
           <table>
             <thead><tr>
-              <th>Image</th><th>Name</th><th>Collection</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th>
+              <th>Image</th><th>Name</th><th>Collection</th><th>Price</th><th>Stock</th><th>Status</th><th>Featured</th><th>Actions</th>
             </tr></thead>
             <tbody id="productsTableBody"></tbody>
           </table>
@@ -394,7 +394,18 @@
       <input type="hidden" id="colId"/>
       <div class="fld"><label>Collection Name *</label><input type="text" id="colName" placeholder="e.g. Winter Warmth"/></div>
       <div class="fld"><label>Description *</label><textarea id="colDesc" placeholder="Brief description of this collection…"></textarea></div>
-      <div class="fld"><label>Cover Image URL *</label><input type="url" id="colImg" placeholder="https://images.unsplash.com/…"/></div>
+      <div class="fld">
+        <label>Cover Image</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button type="button" id="colImgTabUrl" class="btn btn-sm btn-primary" onclick="setColImgTab('url')">🔗 URL</button>
+          <button type="button" id="colImgTabUpload" class="btn btn-sm btn-success" onclick="setColImgTab('upload')" style="background:#ede9fe;color:#5b21b6;">📁 Upload File</button>
+        </div>
+        <div id="colImgUrlArea"><input type="url" id="colImg" placeholder="https://images.unsplash.com/…"/></div>
+        <div id="colImgUploadArea" style="display:none;">
+          <input type="file" id="colImgFile" accept="image/*" onchange="handleColImgUpload(this)"/>
+          <p style="font-size:.74rem;color:var(--muted);margin-top:4px;">Max ~2MB recommended. Stored as base64.</p>
+        </div>
+      </div>
       <div id="colImgPreview" style="margin-top:8px;display:none;"><img style="width:100%;height:160px;object-fit:cover;border-radius:8px;" id="colImgPreviewImg"/></div>
     </div>
     <div class="modal-foot">
@@ -422,9 +433,26 @@
         <div class="fld"><label>Price (₹) *</label><input type="number" id="prodPrice" placeholder="e.g. 2999"/></div>
         <div class="fld"><label>Stock Qty *</label><input type="number" id="prodStock" placeholder="e.g. 10"/></div>
       </div>
-      <div class="fld"><label>Image URL *</label><input type="url" id="prodImg" placeholder="https://…" oninput="previewProdImg()"/></div>
+      <!-- Image: URL or upload -->
+      <div class="fld">
+        <label>Product Image</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button type="button" id="imgTabUrl" class="btn btn-sm btn-primary" onclick="setImgTab('url')">🔗 URL</button>
+          <button type="button" id="imgTabUpload" class="btn btn-sm btn-success" onclick="setImgTab('upload')" style="background:#ede9fe;color:#5b21b6;">📁 Upload File</button>
+        </div>
+        <div id="imgUrlArea"><input type="url" id="prodImg" placeholder="https://…" oninput="previewProdImg()"/></div>
+        <div id="imgUploadArea" style="display:none;">
+          <input type="file" id="prodImgFile" accept="image/*" onchange="handleImgUpload(this)"/>
+          <p style="font-size:.74rem;color:var(--muted);margin-top:4px;">Max ~2MB recommended. Stored as base64.</p>
+        </div>
+      </div>
       <div id="prodImgPreview" style="display:none;margin-top:4px;"><img id="prodImgPreviewImg" style="width:100%;height:140px;object-fit:cover;border-radius:8px;"/></div>
       <div class="fld"><label>Available Sizes (comma-separated)</label><input type="text" id="prodSizes" placeholder="XS,S,M,L,XL"/></div>
+      <!-- Featured toggle -->
+      <div class="fld" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="prodFeatured" style="width:18px;height:18px;accent-color:#0d0d0d;"/>
+        <label style="margin:0;font-weight:600;">⭐ Mark as Featured <span style="font-size:.75rem;color:var(--muted);font-weight:400;">(shown in store Featured section)</span></label>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('productModal')">Cancel</button>
@@ -521,7 +549,7 @@
 <!-- Toast -->
 <div class="toast" id="adminToast"></div>
 
-<script src="../store/js/data.js?v=4"></script>
-<script src="js/admin.js?v=4"></script>
+<script src="../store/js/data.js?v=5"></script>
+<script src="js/admin.js?v=5"></script>
 </body>
 </html>

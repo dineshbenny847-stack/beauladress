@@ -34,6 +34,28 @@ function initAdmin() {
   document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   // Only render the active panel (dashboard) on init — all others render lazily on switchPanel
   renderDashboard();
+  updateOrderNotifBadge();
+}
+
+// ── Order notification badge ─────────────────────────────────────
+function updateOrderNotifBadge() {
+  const db = getDB();
+  const lastSeen = parseInt(localStorage.getItem('ba_admin_last_seen_orders') || '0', 10);
+  const newCount = db.orders.filter(o => new Date(o.date).getTime() > lastSeen).length;
+  const badge = document.getElementById('orderNotifBadge');
+  if (!badge) return;
+  if (newCount > 0) {
+    badge.textContent = newCount > 9 ? '9+' : newCount;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function markOrdersAsSeen() {
+  localStorage.setItem('ba_admin_last_seen_orders', Date.now().toString());
+  const badge = document.getElementById('orderNotifBadge');
+  if (badge) badge.style.display = 'none';
 }
 
 // ── Panel Navigation ─────────────────────────────────────────────
@@ -48,7 +70,7 @@ function switchPanel(name, el) {
   if (name === 'collections') renderCollectionsAdmin();
   if (name === 'products') { populateCollectionFilter(); renderProductsTable(); }
   if (name === 'stock') renderStockManager();
-  if (name === 'orders') renderOrdersTable();
+  if (name === 'orders') { markOrdersAsSeen(); renderOrdersTable(); }
   if (name === 'customers') renderCustomers();
   if (name === 'coupons')  renderCoupons();
   if (name === 'settings') renderSettings();
@@ -140,6 +162,64 @@ function renderCollectionsAdmin() {
   }).join('');
 }
 
+// ── Image tab helpers ────────────────────────────────────────────
+function setImgTab(tab) {
+  const urlArea    = document.getElementById('imgUrlArea');
+  const uploadArea = document.getElementById('imgUploadArea');
+  const btnUrl     = document.getElementById('imgTabUrl');
+  const btnUp      = document.getElementById('imgTabUpload');
+  if (tab === 'url') {
+    urlArea.style.display = ''; uploadArea.style.display = 'none';
+    btnUrl.style.background = 'var(--black)'; btnUrl.style.color = '#fff';
+    btnUp.style.background = '#ede9fe'; btnUp.style.color = '#5b21b6';
+  } else {
+    urlArea.style.display = 'none'; uploadArea.style.display = '';
+    btnUp.style.background = '#5b21b6'; btnUp.style.color = '#fff';
+    btnUrl.style.background = ''; btnUrl.style.color = '';
+  }
+}
+
+function handleImgUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('prodImg').value = e.target.result;
+    document.getElementById('prodImgPreviewImg').src = e.target.result;
+    document.getElementById('prodImgPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function setColImgTab(tab) {
+  const urlArea    = document.getElementById('colImgUrlArea');
+  const uploadArea = document.getElementById('colImgUploadArea');
+  const btnUrl     = document.getElementById('colImgTabUrl');
+  const btnUp      = document.getElementById('colImgTabUpload');
+  if (tab === 'url') {
+    urlArea.style.display = ''; uploadArea.style.display = 'none';
+    btnUrl.style.background = 'var(--black)'; btnUrl.style.color = '#fff';
+    btnUp.style.background = '#ede9fe'; btnUp.style.color = '#5b21b6';
+  } else {
+    urlArea.style.display = 'none'; uploadArea.style.display = '';
+    btnUp.style.background = '#5b21b6'; btnUp.style.color = '#fff';
+    btnUrl.style.background = ''; btnUrl.style.color = '';
+  }
+}
+
+function handleColImgUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('colImg').value = e.target.result;
+    document.getElementById('colImgPreviewImg').src = e.target.result;
+    document.getElementById('colImgPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Collections ──────────────────────────────────────────────────
 function openAddCollectionModal() {
   document.getElementById('colModalTitle').textContent = 'New Collection';
   document.getElementById('colId').value = '';
@@ -147,6 +227,7 @@ function openAddCollectionModal() {
   document.getElementById('colDesc').value = '';
   document.getElementById('colImg').value = '';
   document.getElementById('colImgPreview').style.display = 'none';
+  setColImgTab('url');
   openModal('collectionModal');
 }
 
@@ -161,6 +242,7 @@ function openEditCollectionModal(id) {
   const prev = document.getElementById('colImgPreview');
   document.getElementById('colImgPreviewImg').src = c.image;
   prev.style.display = 'block';
+  setColImgTab('url');
   openModal('collectionModal');
 }
 
@@ -237,12 +319,13 @@ function renderProductsTable() {
   if (search) products = products.filter(p => p.name.toLowerCase().includes(search));
 
   const body = document.getElementById('productsTableBody');
-  if (!products.length) { body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px;">No products found.</td></tr>'; return; }
+  if (!products.length) { body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">No products found.</td></tr>'; return; }
   body.innerHTML = products.map(p => {
     const col = getCollectionById(p.collectionId);
     const statusBadge = p.stock === 0 ? '<span class="badge badge-red">Out of Stock</span>'
       : p.stock <= 3 ? '<span class="badge badge-orange">Low Stock</span>'
       : '<span class="badge badge-green">In Stock</span>';
+    const featuredBtn = `<button onclick="toggleFeatured('${p.id}')" title="${p.featured ? 'Remove from featured' : 'Mark as featured'}" style="font-size:1.2rem;background:none;border:none;cursor:pointer;opacity:${p.featured ? '1' : '0.25'};">⭐</button>`;
     return `
     <tr>
       <td><img class="product-thumb" src="${p.image}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/44?text=No+Img'"/></td>
@@ -251,12 +334,22 @@ function renderProductsTable() {
       <td>${formatPrice(p.price)}</td>
       <td>${p.stock}</td>
       <td>${statusBadge}</td>
+      <td style="text-align:center;">${featuredBtn}</td>
       <td>
         <button class="btn btn-sm btn-success btn-icon" title="Edit" onclick="openEditProductModal('${p.id}')">✏️</button>
         <button class="btn btn-sm btn-danger btn-icon" title="Delete" onclick="confirmDeleteProduct('${p.id}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
+}
+
+function toggleFeatured(productId) {
+  updateDB(db => {
+    const p = db.products.find(x => x.id === productId);
+    if (p) p.featured = !p.featured;
+  });
+  renderProductsTable();
+  showAdminToast(getProductById(productId)?.featured ? '⭐ Product marked as Featured!' : 'Product removed from Featured.');
 }
 
 function openAddProductModal() {
@@ -266,7 +359,9 @@ function openAddProductModal() {
   ['prodName','prodDesc','prodImg','prodSizes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('prodPrice').value = '';
   document.getElementById('prodStock').value = '';
+  document.getElementById('prodFeatured').checked = false;
   document.getElementById('prodImgPreview').style.display = 'none';
+  setImgTab('url');
   openModal('productModal');
 }
 
@@ -283,9 +378,11 @@ function openEditProductModal(id) {
   document.getElementById('prodImg').value = p.image;
   document.getElementById('prodSizes').value = (p.sizes || []).join(',');
   document.getElementById('prodCollection').value = p.collectionId;
+  document.getElementById('prodFeatured').checked = !!p.featured;
   const prev = document.getElementById('prodImgPreview');
   document.getElementById('prodImgPreviewImg').src = p.image;
   prev.style.display = 'block';
+  setImgTab('url');
   openModal('productModal');
 }
 
@@ -305,6 +402,7 @@ function saveProduct() {
   const img = document.getElementById('prodImg').value.trim();
   const sizesRaw = document.getElementById('prodSizes').value;
   const collectionId = document.getElementById('prodCollection').value;
+  const featured = document.getElementById('prodFeatured').checked;
   const sizes = sizesRaw.split(',').map(s => s.trim()).filter(Boolean);
   if (!name || isNaN(price) || isNaN(stock) || !img || !collectionId) {
     showAdminToast('❌ Please fill in all required fields.', true); return;
@@ -312,9 +410,9 @@ function saveProduct() {
   updateDB(db => {
     if (id) {
       const p = db.products.find(x => x.id === id);
-      if (p) { p.name = name; p.description = desc; p.price = Math.round(price * 100); p.stock = stock; p.image = img; p.sizes = sizes.length ? sizes : ['S','M','L']; p.collectionId = collectionId; }
+      if (p) { p.name = name; p.description = desc; p.price = Math.round(price * 100); p.stock = stock; p.image = img; p.sizes = sizes.length ? sizes : ['S','M','L']; p.collectionId = collectionId; p.featured = featured; }
     } else {
-      db.products.push({ id: generateId('p'), name, description: desc, price: Math.round(price * 100), stock, image: img, sizes: sizes.length ? sizes : ['S','M','L'], collectionId });
+      db.products.push({ id: generateId('p'), name, description: desc, price: Math.round(price * 100), stock, image: img, sizes: sizes.length ? sizes : ['S','M','L'], collectionId, featured, createdAt: Date.now() });
     }
   });
   closeModal('productModal');

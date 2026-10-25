@@ -9,12 +9,13 @@
 <body>
 
 <!-- ═══ NAVBAR ═══════════════════════════════════════════════ -->
-<nav class="navbar">
+<nav class="navbar" style="position:sticky;top:0;z-index:999;">
   <div class="container nav-inner">
     <a href="index.html" class="nav-logo">Beau <span>L'adresses</span></a>
     <div class="nav-links">
       <a href="#collections">Collections</a>
       <a href="#shop">Shop</a>
+      <a href="#featured">Featured</a>
       <a href="#about">About</a>
       <a href="orders.html">My Orders</a>
     </div>
@@ -23,9 +24,30 @@
       <button class="nav-icon-btn" onclick="openCart()" title="Cart">
         🛍️ <span class="cart-count" id="cartCount">0</span>
       </button>
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </div>
+  <!-- Mobile dropdown -->
+  <div class="nav-mobile-menu" id="navMobileMenu">
+    <a href="#collections" onclick="closeMobileMenu()">Collections</a>
+    <a href="#shop" onclick="closeMobileMenu()">Shop</a>
+    <a href="#featured" onclick="closeMobileMenu()">Featured</a>
+    <a href="#about" onclick="closeMobileMenu()">About</a>
+    <a href="orders.html">My Orders</a>
+    <div id="navMobileUserArea" style="padding:12px 24px;border-top:1px solid var(--gray-light);margin-top:4px;"></div>
+  </div>
 </nav>
+
+<!-- ═══ SEARCH BAR ════════════════════════════════════════════ -->
+<div class="store-search-bar">
+  <div class="store-search-inner">
+    <input type="text" id="storeSearchInput" placeholder="Search products, collections…" oninput="onStoreSearch(this.value)" onkeydown="if(event.key==='Escape')clearStoreSearch()"/>
+    <button onclick="onStoreSearch(document.getElementById('storeSearchInput').value)">🔍 Search</button>
+    <button class="clear-btn" onclick="clearStoreSearch()" id="searchClearBtn" style="display:none;">✕ Clear</button>
+  </div>
+</div>
 
 <!-- ═══ HERO ══════════════════════════════════════════════════ -->
 <section class="hero">
@@ -52,11 +74,21 @@
   </div>
 </section>
 
+<!-- ═══ FEATURED PICKS ════════════════════════════════════════ -->
+<section class="featured-section" id="featured">
+  <div class="container">
+    <h2 class="section-title">⭐ Featured Picks</h2>
+    <p class="section-sub">Hand-picked favourites — our top selections just for you.</p>
+    <div class="featured-scroll" id="featuredScroll"></div>
+  </div>
+</section>
+
 <!-- ═══ SHOP ══════════════════════════════════════════════════ -->
 <section class="section" id="shop" style="background:#fff;">
   <div class="container">
     <h2 class="section-title">All Products</h2>
     <p class="section-sub">Browse our full range — filter by collection below.</p>
+    <div id="searchResultsNotice"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;" id="filterBtns"></div>
     <div class="grid-4" id="productsGrid"></div>
   </div>
@@ -78,7 +110,7 @@
     <div class="footer-grid">
       <div>
         <div class="footer-logo">Beau <span>L'adresses</span></div>
-        <p>Curated fashion for the modern woman. Style that speaks without saying a word.</p>
+        <p id="footerTagline">Curated fashion for the modern woman. Style that speaks without saying a word.</p>
       </div>
       <div>
         <h4>Quick Links</h4>
@@ -91,9 +123,9 @@
       <div>
         <h4>Contact</h4>
         <ul>
-          <li>hello@beauladresses.com</li>
-          <li>+91 98765 43210</li>
-          <li>Mumbai, India</li>
+          <li id="footerEmail">hello@beauladresses.com</li>
+          <li id="footerPhone">+91 98765 43210</li>
+          <li id="footerCity">Mumbai, India</li>
         </ul>
       </div>
     </div>
