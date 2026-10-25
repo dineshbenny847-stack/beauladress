@@ -5,6 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Checkout — Beau L'adresses</title>
   <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .payment-section { display: none; }
+    .payment-section.active { display: block; }
+
+    /* Payment method cards */
+    .payment-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 8px; }
+    .pay-card { border: 2px solid var(--gray-light); border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all .2s; }
+    .pay-card:hover { border-color: #0d0d0d; }
+    .pay-card.selected { border-color: #0d0d0d; background: #f9f9f9; }
+    .pay-card .pay-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .pay-card .pay-label { font-size: .82rem; font-weight: 700; }
+
+    /* UPI box */
+    .upi-box { background: #f9f9f9; border: 2px solid #e5e5e5; border-radius: 16px; padding: 28px 24px; text-align: center; margin-top: 16px; }
+    .upi-id-display { font-size: 1.15rem; font-weight: 800; background: #fff; border: 2px dashed #c9848a; border-radius: 10px; padding: 12px 20px; margin: 12px auto; display: inline-block; letter-spacing: .5px; }
+    .upi-apps { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+    .upi-app-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 16px; background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; font-size: .78rem; font-weight: 700; cursor: pointer; transition: all .2s; text-decoration: none; color: #0d0d0d; }
+    .upi-app-btn:hover { border-color: #0d0d0d; transform: translateY(-2px); }
+    .upi-app-btn .app-icon { font-size: 1.6rem; }
+    .copy-btn { background: #0d0d0d; color: #fff; border: none; padding: 9px 20px; border-radius: 50px; font-size: .85rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .copy-btn:hover { background: #333; }
+
+    /* QR code box */
+    .qr-wrap { background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; padding: 16px; display: inline-block; margin: 12px auto; }
+    .qr-wrap img { width: 180px; height: 180px; display: block; }
+
+    /* COD box */
+    .cod-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 16px; padding: 24px; text-align: center; margin-top: 16px; }
+    .cod-box .cod-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .cod-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .cod-box p { color: #555; font-size: .88rem; line-height: 1.6; }
+
+    /* Card box */
+    .card-box { background: #eff6ff; border: 2px solid #93c5fd; border-radius: 16px; padding: 24px; text-align: center; margin-top: 16px; }
+    .card-box .card-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .card-box h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .card-box p { color: #555; font-size: .88rem; line-height: 1.6; }
+    .card-box a { color: #2563eb; font-weight: 700; }
+
+    /* UPI paid confirm */
+    .upi-paid-section { display:none; margin-top: 16px; background: #fefce8; border: 2px solid #fde047; border-radius: 14px; padding: 20px; }
+    .upi-paid-section.show { display: block; }
+    .upi-paid-section label { font-weight: 700; font-size: .88rem; display: block; margin-bottom: 8px; }
+    .upi-paid-section input { width: 100%; padding: 11px 14px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: .95rem; }
+    .upi-paid-section p { font-size: .8rem; color: #888; margin-top: 6px; }
+
+    @media(max-width:480px) {
+      .payment-options { grid-template-columns: repeat(3,1fr); }
+      .upi-apps { gap: 8px; }
+      .upi-app-btn { padding: 10px 10px; font-size: .72rem; }
+    }
+  </style>
 </head>
 <body>
 <nav class="navbar">
@@ -18,6 +70,7 @@
   <h1>Checkout</h1>
   <p style="color:#888;margin-bottom:28px;">Almost there! Complete your order below.</p>
 
+  <!-- Order Summary -->
   <div class="order-summary-box">
     <h3>Order Summary</h3>
     <div id="checkoutItems"></div>
@@ -28,6 +81,7 @@
   </div>
 
   <form id="checkoutForm" onsubmit="handleCheckout(event)">
+    <!-- Delivery Details -->
     <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;">Delivery Details</h3>
     <div class="form-group">
       <label>Full Name *</label>
@@ -59,16 +113,95 @@
       <label>State *</label>
       <input type="text" name="state" required placeholder="Maharashtra"/>
     </div>
-    <div class="form-group" style="margin-top:24px;">
-      <label>Payment Method</label>
-      <select name="payment">
-        <option value="cod">Cash on Delivery</option>
-        <option value="upi">UPI / QR Code</option>
-        <option value="card">Credit / Debit Card</option>
-      </select>
+
+    <!-- Payment Method -->
+    <div class="form-group" style="margin-top:28px;">
+      <label style="font-weight:700;font-size:1rem;margin-bottom:12px;display:block;">Choose Payment Method</label>
+      <div class="payment-options">
+        <div class="pay-card selected" onclick="selectPayment('upi',this)">
+          <div class="pay-icon">📱</div>
+          <div class="pay-label">UPI / QR</div>
+        </div>
+        <div class="pay-card" onclick="selectPayment('cod',this)">
+          <div class="pay-icon">💵</div>
+          <div class="pay-label">Cash on Delivery</div>
+        </div>
+        <div class="pay-card" onclick="selectPayment('card',this)">
+          <div class="pay-icon">💳</div>
+          <div class="pay-label">Card / Net Banking</div>
+        </div>
+      </div>
+      <input type="hidden" name="payment" id="paymentInput" value="upi"/>
     </div>
-    <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:1.05rem;border-radius:50px;margin-top:8px;">
-      Place Order →
+
+    <!-- UPI Payment Section -->
+    <div class="payment-section active" id="section-upi">
+      <div class="upi-box">
+        <p style="font-size:.85rem;color:#555;margin-bottom:4px;">Pay to UPI ID</p>
+        <div class="upi-id-display" id="upiIdDisplay">6281807448-2@ibl</div>
+        <br/>
+        <button type="button" class="copy-btn" onclick="copyUPI()">📋 Copy UPI ID</button>
+
+        <div style="margin:20px 0;border-top:1px solid #e5e5e5;padding-top:20px;">
+          <p style="font-size:.85rem;color:#555;margin-bottom:12px;">Or scan QR code</p>
+          <div class="qr-wrap">
+            <!-- QR code generated from UPI ID using a free QR API -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=6281807448-2@ibl%26pn=Beau%20Ladresses%26cu=INR" alt="UPI QR Code"/>
+          </div>
+          <p style="font-size:.75rem;color:#888;margin-top:8px;">Scan with any UPI app</p>
+        </div>
+
+        <div>
+          <p style="font-size:.85rem;color:#555;margin-bottom:10px;">Open your UPI app directly</p>
+          <div class="upi-apps">
+            <a class="upi-app-btn" href="gpay://upi/pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="gpayLink">
+              <span class="app-icon">🟢</span>Google Pay
+            </a>
+            <a class="upi-app-btn" href="phonepe://pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="phonepeLink">
+              <span class="app-icon">🟣</span>PhonePe
+            </a>
+            <a class="upi-app-btn" href="paytmmp://pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="paytmLink">
+              <span class="app-icon">🔵</span>Paytm
+            </a>
+            <a class="upi-app-btn" href="upi://pay?pa=6281807448-2@ibl&pn=BeauLadresses&cu=INR" id="bhimLink">
+              <span class="app-icon">🇮🇳</span>BHIM
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- After payment confirmation -->
+      <div class="upi-paid-section show" id="upiPaidSection">
+        <label>✅ After paying, enter your UPI Transaction ID</label>
+        <input type="text" id="upiTxnId" name="upiTxnId" placeholder="e.g. 407223819345 (from your UPI app)"/>
+        <p>⚠️ Your order will be confirmed after we verify the payment.</p>
+      </div>
+    </div>
+
+    <!-- COD Section -->
+    <div class="payment-section" id="section-cod">
+      <div class="cod-box">
+        <div class="cod-icon">💵</div>
+        <h3>Cash on Delivery</h3>
+        <p>Pay in cash when your order arrives at your doorstep. No advance payment needed.</p>
+        <p style="margin-top:8px;font-size:.8rem;color:#16a34a;font-weight:600;">✅ Available across India</p>
+      </div>
+    </div>
+
+    <!-- Card / Net Banking Section -->
+    <div class="payment-section" id="section-card">
+      <div class="card-box">
+        <div class="card-icon">💳</div>
+        <h3>Card / Net Banking</h3>
+        <p>We are integrating Razorpay for secure card payments. For now please use <strong>UPI</strong> or <strong>Cash on Delivery</strong>.</p>
+        <p style="margin-top:12px;font-size:.82rem;">
+          Or pay via UPI — <a href="#" onclick="selectPaymentByName('upi')">Switch to UPI →</a>
+        </p>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:1.05rem;border-radius:50px;margin-top:24px;" id="placeOrderBtn">
+      ✅ Place Order →
     </button>
   </form>
 </div>
@@ -76,10 +209,11 @@
 <!-- Order Confirmation Modal -->
 <div class="modal-overlay" id="confirmModal">
   <div class="modal-box" style="grid-template-columns:1fr;max-width:480px;text-align:center;padding:48px 40px;border-radius:20px;">
-    <div style="font-size:3rem;margin-bottom:16px;">🎉</div>
+    <div style="font-size:3rem;margin-bottom:16px;" id="confirmEmoji">🎉</div>
     <h2 style="font-size:1.6rem;font-weight:800;margin-bottom:8px;">Order Placed!</h2>
-    <p style="color:#888;margin-bottom:8px;">Your order has been confirmed.</p>
-    <p id="confirmOrderId" style="font-weight:700;color:#0d0d0d;margin-bottom:24px;"></p>
+    <p style="color:#888;margin-bottom:8px;" id="confirmMsg">Your order has been confirmed.</p>
+    <p id="confirmOrderId" style="font-weight:700;color:#0d0d0d;margin-bottom:8px;"></p>
+    <p id="confirmPayNote" style="font-size:.85rem;color:#c9848a;margin-bottom:24px;"></p>
     <a href="index.html" class="btn btn-primary" style="margin:0 auto;">Continue Shopping →</a>
   </div>
 </div>
@@ -87,26 +221,104 @@
 <div class="toast" id="toast"></div>
 <script src="js/data.js"></script>
 <script>
+  let selectedPaymentMethod = 'upi';
+
   document.addEventListener('DOMContentLoaded', () => {
     const cart = getCart();
     const db = getDB();
     if (!cart.length) { window.location.href = 'index.html'; return; }
+
     const itemsDiv = document.getElementById('checkoutItems');
     itemsDiv.innerHTML = cart.map(item => {
       const p = db.products.find(x => x.id === item.productId);
       return p ? `<div class="order-line"><span>${p.name} (${item.size}) x${item.qty}</span><span>${formatPrice(p.price * item.qty)}</span></div>` : '';
     }).join('');
-    document.getElementById('checkoutTotal').textContent = formatPrice(getCartTotal());
+
+    const total = getCartTotal();
+    document.getElementById('checkoutTotal').textContent = formatPrice(total);
+
+    // Update UPI links with actual amount
+    const amt = (total / 100).toFixed(2);
+    const upiBase = '6281807448-2@ibl';
+    const name = 'BeauLadresses';
+    document.getElementById('gpayLink').href    = `gpay://upi/pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
+    document.getElementById('phonepeLink').href = `phonepe://pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
+    document.getElementById('paytmLink').href   = `paytmmp://pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
+    document.getElementById('bhimLink').href    = `upi://pay?pa=${upiBase}&pn=${name}&am=${amt}&cu=INR`;
+
+    // Update QR with amount
+    document.querySelector('.qr-wrap img').src =
+      `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=${upiBase}%26pn=${name}%26am=${amt}%26cu=INR`;
   });
+
+  function selectPayment(method, el) {
+    selectedPaymentMethod = method;
+    document.getElementById('paymentInput').value = method;
+    document.querySelectorAll('.pay-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.querySelectorAll('.payment-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + method).classList.add('active');
+  }
+
+  function selectPaymentByName(method) {
+    const cards = document.querySelectorAll('.pay-card');
+    const map = { upi: 0, cod: 1, card: 2 };
+    selectPayment(method, cards[map[method]]);
+  }
+
+  function copyUPI() {
+    navigator.clipboard.writeText('6281807448-2@ibl').then(() => {
+      showToast('✅ UPI ID copied!');
+    }).catch(() => {
+      // fallback
+      const el = document.createElement('textarea');
+      el.value = '6281807448-2@ibl';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('✅ UPI ID copied!');
+    });
+  }
 
   function handleCheckout(e) {
     e.preventDefault();
     const fd = new FormData(e.target);
     const info = Object.fromEntries(fd.entries());
+
+    // Validate UPI txn ID if UPI selected
+    if (selectedPaymentMethod === 'upi') {
+      const txn = document.getElementById('upiTxnId').value.trim();
+      if (!txn) {
+        showToast('⚠️ Please enter your UPI Transaction ID after paying.');
+        document.getElementById('upiTxnId').focus();
+        return;
+      }
+      info.upiTxnId = txn;
+    }
+
+    info.paymentMethod = selectedPaymentMethod;
     const order = placeOrder(info);
+
+    // Show confirmation
+    const emoji = { upi: '🎉', cod: '🎉', card: '🎉' };
+    const note = {
+      upi: '💳 UPI payment received. We will confirm your order shortly.',
+      cod: '💵 Pay cash when your order arrives.',
+      card: ''
+    };
+    document.getElementById('confirmEmoji').textContent = '🎉';
     document.getElementById('confirmOrderId').textContent = 'Order ID: ' + order.id;
+    document.getElementById('confirmPayNote').textContent = note[selectedPaymentMethod] || '';
     document.getElementById('confirmModal').classList.add('open');
     document.body.style.overflow = 'hidden';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
   }
 </script>
 </body>
