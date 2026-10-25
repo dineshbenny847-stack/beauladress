@@ -262,3 +262,54 @@ tr:hover td { background: var(--bg); }
   .nav-item .nav-icon { width: auto; }
   .notif-dropdown { right: 8px; width: calc(100vw - 16px); }
 }
+
+/* ─── Mobile Admin (<640px) — overlay sidebar drawer ─────────── */
+.admin-mob-toggle { display: none; }
+.admin-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 95; }
+.admin-sidebar-overlay.open { display: block; }
+
+@media (max-width: 640px) {
+  /* Show hamburger button in topbar */
+  .admin-mob-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 8px; background: var(--bg);
+    font-size: 1.2rem; cursor: pointer; border: none; flex-shrink: 0;
+  }
+
+  /* Sidebar becomes a full drawer, hidden off-screen by default */
+  .sidebar {
+    width: var(--sidebar-w) !important;
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    z-index: 100;
+  }
+  .sidebar.mob-open {
+    transform: translateX(0);
+  }
+  /* Restore all text labels when drawer is open */
+  .sidebar.mob-open .sidebar-logo .text,
+  .sidebar.mob-open .nav-item span:not(.nav-icon),
+  .sidebar.mob-open .sidebar-footer a span.text { display: inline; }
+  .sidebar.mob-open .nav-item { justify-content: flex-start; padding: 13px 20px; }
+  .sidebar.mob-open .nav-item .nav-icon { width: 22px; }
+
+  /* Topbar spans full width */
+  .admin-topbar { left: 0 !important; padding: 0 14px; gap: 10px; }
+  .main-content { margin-left: 0 !important; padding: 20px 14px; }
+
+  /* Shrink topbar elements */
+  .topbar-clock { display: none; }
+  .topbar-greeting { font-size: .8rem; }
+  .store-toggle-label { display: none; }
+
+  /* Stat cards single column on very small */
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .quick-actions { grid-template-columns: repeat(2,1fr); }
+
+  /* Tables scroll horizontally */
+  .card { overflow-x: auto; }
+  table { min-width: 560px; }
+
+  /* Modal full-width */
+  .modal-panel { width: calc(100vw - 32px); }
+}

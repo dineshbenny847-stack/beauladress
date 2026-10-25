@@ -187,4 +187,46 @@ button { cursor: pointer; font-family: var(--font); border: none; background: no
   .nav-links { display: none; }
   .hamburger { display: flex; }
   .cart-drawer { width: 100vw; }
+
+  /* ── Checkout mobile ── */
+  .checkout-wrap { margin: 24px auto; padding: 0 16px; }
+  .checkout-wrap h1 { font-size: 1.4rem; }
+  .payment-options { grid-template-columns: 1fr !important; }
+  .upi-box, .cod-box, .netcard-box { padding: 20px 14px; }
+  .qr-box img { width: 140px; height: 140px; }
+
+  /* ── Login / Auth mobile ── */
+  .auth-card { padding: 32px 20px; }
+
+  /* ── User Dashboard mobile ── */
+  .dash-layout { flex-direction: column; }
+  .dash-sidebar {
+    width: 100%; height: auto; position: relative; top: 0;
+    border-right: none; border-bottom: 1px solid #e5e5e5;
+    flex-direction: row; flex-wrap: wrap; overflow-x: auto;
+  }
+  .dash-user-card { padding: 14px 16px; display: flex; align-items: center; gap: 12px; border-bottom: none; border-right: 1px solid #f0f0f0; flex-shrink: 0; }
+  .dash-avatar { margin-bottom: 0; width: 40px; height: 40px; font-size: 1rem; flex-shrink: 0; }
+  .dash-user-name { font-size: .85rem; }
+  .dash-user-email { font-size: .72rem; }
+  .dash-nav { display: flex; flex-direction: row; padding: 0; overflow-x: auto; flex: 1; align-items: center; white-space: nowrap; }
+  .dash-nav-item { padding: 14px 12px; border-left: none; border-bottom: 3px solid transparent; flex-shrink: 0; flex-direction: column; gap: 4px; font-size: .74rem; }
+  .dash-nav-item.active { border-left-color: transparent; border-bottom-color: #c9848a; }
+  .dash-nav-item .ni { font-size: .95rem; }
+  .dash-footer-nav { display: none; }
+  .dash-main { padding: 20px 16px; }
+  .dash-stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* ── Orders page mobile ── */
+  .orders-wrap { padding: 0 16px; }
+  .order-track-steps { gap: 0 !important; }
+  .order-track-steps .step-label { font-size: .65rem; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 1.6rem; }
+  .section-title { font-size: 1.4rem; }
+  .dash-stats { grid-template-columns: 1fr; }
+  .qr-box img { width: 120px; height: 120px; }
+  .upi-app { padding: 8px 10px; font-size: .7rem; }
 }

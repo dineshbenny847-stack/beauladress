@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Portal — Beaula Dresses</title>
-  <link rel="stylesheet" href="css/admin.css"/>
+  <link rel="stylesheet" href="css/admin.css?v=7"/>
 </head>
 <body>
 
@@ -31,9 +31,13 @@
 <!-- ═══ ADMIN LAYOUT ══════════════════════════════════════════════ -->
 <div class="admin-layout" id="adminLayout">
 
+  <!-- Mobile sidebar overlay -->
+  <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeMobSidebar()"></div>
+
   <!-- ── TOP BAR ── -->
   <header class="admin-topbar">
     <div class="topbar-left">
+      <button class="admin-mob-toggle" id="adminMobToggle" onclick="toggleMobSidebar()" title="Menu">☰</button>
       <span class="topbar-greeting" id="topbarGreeting">Welcome, Admin 👋</span>
       <span class="topbar-clock" id="topbarClock"></span>
     </div>
@@ -653,7 +657,25 @@
 <!-- Toast -->
 <div class="toast" id="adminToast"></div>
 
-<script src="../store/js/data.js?v=6"></script>
-<script src="js/admin.js?v=6"></script>
+<script src="../store/js/data.js?v=7"></script>
+<script src="js/admin.js?v=7"></script>
+<script>
+function toggleMobSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('adminSidebarOverlay');
+  sb.classList.toggle('mob-open');
+  ov.classList.toggle('open');
+}
+function closeMobSidebar() {
+  document.querySelector('.sidebar').classList.remove('mob-open');
+  document.getElementById('adminSidebarOverlay').classList.remove('open');
+}
+// Close drawer when a nav item is clicked on mobile
+document.querySelectorAll('.nav-item').forEach(function(el) {
+  el.addEventListener('click', function() {
+    if (window.innerWidth <= 640) closeMobSidebar();
+  });
+});
+</script>
 </body>
 </html>

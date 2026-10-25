@@ -1,5 +1,5 @@
 // Shared data layer – persists to localStorage
-const DB_KEY = 'beauladresses_db';
+const DB_KEY = 'beauladresses_db_v2';
 
 const defaultData = {
   collections: [
@@ -19,12 +19,12 @@ const defaultData = {
     }
   ],
   products: [
-    { id: 'p1', collectionId: 'col_1', name: 'Floral Sundress',       price: 4999,  stock: 12, image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80', sizes: ['XS','S','M','L'], description: 'A breezy floral sundress perfect for summer days.' },
-    { id: 'p2', collectionId: 'col_1', name: 'Linen Co-ord Set',      price: 6499,  stock: 8,  image: 'https://images.unsplash.com/photo-1583496661160-fb5218afa9a7?w=400&q=80', sizes: ['S','M','L','XL'], description: 'Matching linen top and trouser set.' },
-    { id: 'p3', collectionId: 'col_1', name: 'Stripe Wrap Top',       price: 2999,  stock: 0,  image: 'https://images.unsplash.com/photo-1554568218-0f1715e72254?w=400&q=80', sizes: ['XS','S','M'], description: 'Classic stripe wrap top in cotton.' },
-    { id: 'p4', collectionId: 'col_2', name: 'Velvet Slip Dress',     price: 8999,  stock: 5,  image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&q=80', sizes: ['XS','S','M','L'], description: 'Luxurious velvet slip dress for evenings.' },
-    { id: 'p5', collectionId: 'col_2', name: 'Sequin Blazer',         price: 11999, stock: 3,  image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80', sizes: ['S','M','L'], description: 'Statement sequin blazer for nights out.' },
-    { id: 'p6', collectionId: 'col_2', name: 'Satin Wide-Leg Pants',  price: 7499,  stock: 0,  image: 'https://images.unsplash.com/photo-1594938298603-c8148c4b4f3a?w=400&q=80', sizes: ['XS','S','M','L','XL'], description: 'Flowing satin wide-leg trousers.' }
+    { id: 'p1', collectionId: 'col_1', name: 'Floral Sundress',       price: 499900,  stock: 12, image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80', sizes: ['XS','S','M','L'], description: 'A breezy floral sundress perfect for summer days.', createdAt: Date.now() },
+    { id: 'p2', collectionId: 'col_1', name: 'Linen Co-ord Set',      price: 649900,  stock: 8,  image: 'https://images.unsplash.com/photo-1583496661160-fb5218afa9a7?w=400&q=80', sizes: ['S','M','L','XL'], description: 'Matching linen top and trouser set.', createdAt: Date.now() },
+    { id: 'p3', collectionId: 'col_1', name: 'Stripe Wrap Top',       price: 299900,  stock: 0,  image: 'https://images.unsplash.com/photo-1554568218-0f1715e72254?w=400&q=80', sizes: ['XS','S','M'], description: 'Classic stripe wrap top in cotton.', createdAt: Date.now() },
+    { id: 'p4', collectionId: 'col_2', name: 'Velvet Slip Dress',     price: 899900,  stock: 5,  image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&q=80', sizes: ['XS','S','M','L'], description: 'Luxurious velvet slip dress for evenings.', createdAt: Date.now() },
+    { id: 'p5', collectionId: 'col_2', name: 'Sequin Blazer',         price: 1199900, stock: 3,  image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80', sizes: ['S','M','L'], description: 'Statement sequin blazer for nights out.', createdAt: Date.now() },
+    { id: 'p6', collectionId: 'col_2', name: 'Satin Wide-Leg Pants',  price: 749900,  stock: 0,  image: 'https://images.unsplash.com/photo-1594938298603-c8148c4b4f3a?w=400&q=80', sizes: ['XS','S','M','L','XL'], description: 'Flowing satin wide-leg trousers.', createdAt: Date.now() }
   ],
   orders: [],
   cart: [],
