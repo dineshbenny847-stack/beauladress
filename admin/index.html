@@ -31,6 +31,46 @@
 <!-- ═══ ADMIN LAYOUT ══════════════════════════════════════════════ -->
 <div class="admin-layout" id="adminLayout">
 
+  <!-- ── TOP BAR ── -->
+  <header class="admin-topbar">
+    <div class="topbar-left">
+      <span class="topbar-greeting" id="topbarGreeting">Welcome, Admin 👋</span>
+      <span class="topbar-clock" id="topbarClock"></span>
+    </div>
+    <div class="topbar-right">
+      <!-- Store open/closed toggle -->
+      <div class="store-toggle">
+        <span class="store-toggle-label">Store:</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="storeOpenToggle" onchange="toggleStoreStatus(this.checked)" checked/>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="store-status-chip open" id="storeStatusChip">Open</span>
+      </div>
+      <!-- Bell notification button -->
+      <button class="bell-btn no-print" id="bellBtn" onclick="toggleNotifDropdown()" title="Notifications">
+        🔔
+        <span class="bell-dot" id="bellDot"></span>
+      </button>
+      <!-- Notification dropdown -->
+      <div class="notif-dropdown" id="notifDropdown">
+        <div class="notif-dd-head">
+          <h4>🔔 Notifications</h4>
+          <div style="display:flex;gap:8px;">
+            <button onclick="markAllNotifRead()" style="font-size:.75rem;color:var(--blue);font-weight:700;background:none;border:none;cursor:pointer;">Mark all read</button>
+            <button onclick="clearAllNotif()" style="font-size:.75rem;color:var(--red);font-weight:700;background:none;border:none;cursor:pointer;">Clear all</button>
+          </div>
+        </div>
+        <div class="notif-dd-body" id="notifDdBody">
+          <div class="notif-dd-empty">No notifications yet</div>
+        </div>
+        <div class="notif-dd-foot">
+          <button onclick="switchPanel('orders',document.querySelector('[data-panel=orders]'));closeNotifDropdown();" class="btn btn-sm btn-primary" style="flex:1;">View All Orders →</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -54,13 +94,17 @@
         <span class="nav-icon">📦</span><span>Stock Manager</span>
       </div>
       <div class="nav-item" data-panel="orders" onclick="switchPanel('orders',this)" id="navOrders">
-        <span class="nav-icon">🧾</span><span>Orders</span><span id="orderNotifBadge" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:.65rem;font-weight:700;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;flex-shrink:0;">0</span>
+        <span class="nav-icon">🧾</span><span>Orders</span>
+        <span id="orderNotifBadge" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:.65rem;font-weight:700;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;flex-shrink:0;">0</span>
       </div>
       <div class="nav-item" data-panel="customers" onclick="switchPanel('customers',this)">
         <span class="nav-icon">👥</span><span>Customers</span>
       </div>
       <div class="nav-item" data-panel="coupons" onclick="switchPanel('coupons',this)">
         <span class="nav-icon">🎟️</span><span>Coupons</span>
+      </div>
+      <div class="nav-item" data-panel="notifications" onclick="switchPanel('notifications',this)">
+        <span class="nav-icon">🔔</span><span>Notifications</span>
       </div>
       <div class="nav-item" data-panel="settings" onclick="switchPanel('settings',this)">
         <span class="nav-icon">⚙️</span><span>Settings</span>
@@ -86,10 +130,38 @@
         <span id="dashDate" style="font-size:.85rem;color:#888;"></span>
       </div>
       <div id="dashLowStockBanner"></div>
+      <!-- Quick action buttons -->
+      <div class="quick-actions" id="quickActions">
+        <div class="qa-btn" onclick="openAddProductModal();switchPanel('products',document.querySelector('[data-panel=products]'))">
+          <div class="qa-icon">➕</div><span>Add Product</span>
+        </div>
+        <div class="qa-btn" onclick="openAddCollectionModal();switchPanel('collections',document.querySelector('[data-panel=collections]'))">
+          <div class="qa-icon">🗂️</div><span>New Collection</span>
+        </div>
+        <div class="qa-btn" onclick="switchPanel('orders',document.querySelector('[data-panel=orders]'))">
+          <div class="qa-icon">🧾</div><span>View Orders</span>
+        </div>
+        <div class="qa-btn" onclick="switchPanel('stock',document.querySelector('[data-panel=stock]'))">
+          <div class="qa-icon">📦</div><span>Stock Manager</span>
+        </div>
+      </div>
       <div class="stats-grid" id="statsGrid"></div>
+      <!-- Revenue sparkline + today comparison -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2>📅 Revenue — Last 7 Days</h2>
+          <div id="todayVsYesterday" style="font-size:.82rem;color:var(--muted);"></div>
+        </div>
+        <div class="card-body">
+          <div id="revSparkline"></div>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
         <div class="card">
-          <div class="card-header"><h2>Recent Orders</h2></div>
+          <div class="card-header">
+            <h2>Recent Orders</h2>
+            <button onclick="switchPanel('orders',document.querySelector('[data-panel=orders]'))" style="font-size:.78rem;color:var(--blue);font-weight:700;background:none;border:none;cursor:pointer;">View all →</button>
+          </div>
           <div class="card-body" id="recentOrdersList"></div>
         </div>
         <div class="card">
@@ -175,17 +247,14 @@
       <div class="page-header">
         <div><h1>Analytics</h1><p>Track your store performance.</p></div>
       </div>
-      <!-- Revenue summary cards -->
       <div class="stats-grid" id="analyticsStats"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
-        <!-- Revenue bar chart -->
         <div class="card">
           <div class="card-header"><h2>📅 Revenue by Collection</h2></div>
           <div class="card-body">
             <div id="revenueChart" style="width:100%;"></div>
           </div>
         </div>
-        <!-- Payment method pie -->
         <div class="card">
           <div class="card-header"><h2>💳 Payment Methods</h2></div>
           <div class="card-body">
@@ -193,7 +262,6 @@
           </div>
         </div>
       </div>
-      <!-- Top products -->
       <div class="card">
         <div class="card-header"><h2>🏆 Top Selling Products</h2></div>
         <div class="card-body" style="padding:0;">
@@ -222,8 +290,22 @@
           <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()" style="white-space:nowrap;">⬇ Export CSV</button>
         </div>
       </div>
-      <!-- Order status summary -->
+      <!-- Order status summary cards -->
       <div id="orderStatusCards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;"></div>
+      <!-- Bulk action bar -->
+      <div class="bulk-bar" id="bulkBar">
+        <span id="bulkCountLabel">0 selected</span>
+        <select id="bulkStatusSel">
+          <option value="">— Change status to —</option>
+          <option value="Confirmed">📋 Confirmed</option>
+          <option value="Processing">⚙️ Processing</option>
+          <option value="Shipped">🚚 Shipped</option>
+          <option value="Delivered">✅ Delivered</option>
+          <option value="Cancelled">❌ Cancelled</option>
+        </select>
+        <button onclick="applyBulkStatus()" style="background:#c9848a;color:#fff;">✅ Apply</button>
+        <button onclick="clearBulkSelection()" style="background:#444;color:#fff;">✕ Clear</button>
+      </div>
       <div class="card">
         <div class="card-header">
           <h2>Order History</h2>
@@ -231,7 +313,10 @@
         </div>
         <div class="card-body" style="padding:0;">
           <table>
-            <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th><input type="checkbox" id="selectAllOrders" onchange="toggleSelectAllOrders(this.checked)" style="accent-color:#0d0d0d;"/></th>
+              <th>Order ID</th><th>Customer</th><th>Date</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Actions</th>
+            </tr></thead>
             <tbody id="ordersTableBody"></tbody>
           </table>
         </div>
@@ -243,7 +328,6 @@
       <div class="page-header">
         <div><h1>Customers</h1><p>All customers who have placed orders.</p></div>
       </div>
-      <!-- Customer stats -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;" id="customerStats"></div>
       <div class="card">
         <div class="card-header">
@@ -262,14 +346,10 @@
     <!-- ── COUPONS ── -->
     <div class="section-panel" id="panel-coupons">
       <div class="page-header">
-        <div><h1>🎟️ Coupons & Discounts</h1><p>Create and manage discount codes for your customers.</p></div>
+        <div><h1>🎟️ Coupons &amp; Discounts</h1><p>Create and manage discount codes for your customers.</p></div>
         <button class="btn btn-primary" onclick="openCouponModal()">+ New Coupon</button>
       </div>
-
-      <!-- Stats row -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;" id="couponStats"></div>
-
-      <!-- Coupons table -->
       <div class="card">
         <div class="card-header">
           <h2>All Coupons</h2>
@@ -286,15 +366,31 @@
       </div>
     </div>
 
+    <!-- ── NOTIFICATIONS ── -->
+    <div class="section-panel" id="panel-notifications">
+      <div class="page-header">
+        <div><h1>🔔 Notifications</h1><p>All activity alerts — new orders, low stock, system events.</p></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-success" onclick="markAllNotifRead()">✅ Mark All Read</button>
+          <button class="btn btn-sm btn-danger" onclick="clearAllNotif()">🗑 Clear All</button>
+        </div>
+      </div>
+      <!-- Notification filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;" id="notifFilterTabs">
+        <button class="btn btn-primary btn-sm" onclick="renderNotificationsPanel('all',this)" data-filter="all">All</button>
+        <button class="btn btn-sm" style="background:var(--surface);" onclick="renderNotificationsPanel('order',this)" data-filter="order">🧾 Orders</button>
+        <button class="btn btn-sm" style="background:var(--surface);" onclick="renderNotificationsPanel('stock',this)" data-filter="stock">📦 Stock</button>
+        <button class="btn btn-sm" style="background:var(--surface);" onclick="renderNotificationsPanel('system',this)" data-filter="system">⚙️ System</button>
+      </div>
+      <div id="notifPanelBody"></div>
+    </div>
+
     <!-- ── SETTINGS ── -->
     <div class="section-panel" id="panel-settings">
       <div class="page-header">
         <div><h1>Settings</h1><p>Manage your store configuration and account.</p></div>
       </div>
-
-      <!-- Low Stock Alert Banner -->
       <div id="settingsLowStockBanner"></div>
-
       <!-- Live store preview bar -->
       <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <span style="font-size:.82rem;color:#166534;font-weight:600;">🌐 Currently saved in store:</span>
@@ -302,9 +398,7 @@
         <span style="font-size:.82rem;background:#dcfce7;padding:3px 10px;border-radius:50px;color:#166534;"><strong>UPI:</strong> <span id="settingsUpiDisplay">—</span></span>
         <span style="font-size:.82rem;background:#dcfce7;padding:3px 10px;border-radius:50px;color:#166534;"><strong>📞</strong> <span id="previewPhone">—</span></span>
       </div>
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-
         <!-- Store Info -->
         <div class="card">
           <div class="card-header">
@@ -320,7 +414,6 @@
             <button class="btn btn-primary" onclick="saveStoreSettings()" style="width:100%;margin-top:12px;">💾 Save Store Info</button>
           </div>
         </div>
-
         <!-- Payment Settings -->
         <div class="card">
           <div class="card-header">
@@ -341,13 +434,11 @@
                 <div style="background:#fff;border:2px solid var(--border);border-radius:10px;padding:12px;display:inline-block;">
                   <img id="settingsQR" src="" style="width:140px;height:140px;" alt="UPI QR"/>
                 </div>
-                <p style="font-size:.74rem;color:var(--muted);margin-top:4px;">Updates live as you type</p>
               </div>
             </div>
-            <button class="btn btn-primary" onclick="savePaymentSettings()" style="width:100%;margin-top:4px;">💾 Save & Activate UPI ID</button>
+            <button class="btn btn-primary" onclick="savePaymentSettings()" style="width:100%;margin-top:4px;">💾 Save &amp; Activate UPI ID</button>
           </div>
         </div>
-
         <!-- Change Password -->
         <div class="card">
           <div class="card-header"><h2>🔐 Change Admin Password</h2></div>
@@ -362,7 +453,6 @@
             <div id="pwdErrMsg" style="display:none;margin-top:10px;background:#fee2e2;color:#dc2626;padding:9px 14px;border-radius:8px;font-size:.85rem;font-weight:600;"></div>
           </div>
         </div>
-
         <!-- Danger Zone -->
         <div class="card" style="border:2px solid #fee2e2;">
           <div class="card-header" style="background:#fff5f5;"><h2 style="color:#dc2626;">⚠️ Danger Zone</h2></div>
@@ -370,15 +460,29 @@
             <p style="font-size:.88rem;color:#555;margin-bottom:16px;line-height:1.6;">These actions are permanent and cannot be undone. Use with caution.</p>
             <div style="display:flex;flex-direction:column;gap:10px;">
               <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="confirmClearOrders()">🗑 Clear All Orders</button>
+              <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="confirmClearNotifications()">🔔 Clear All Notifications</button>
               <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="confirmResetStore()">⚡ Reset Entire Store Data</button>
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
   </main>
+</div>
+
+<!-- ═══ NEW ORDER POPUP ════════════════════════════════════════════ -->
+<div class="order-popup" id="orderPopup">
+  <div class="order-popup-icon">🛍️</div>
+  <div class="order-popup-content">
+    <p id="orderPopupTitle">New Order!</p>
+    <span id="orderPopupSub">—</span>
+    <div class="order-popup-actions">
+      <button class="order-popup-view" id="orderPopupViewBtn">View Order</button>
+      <button class="order-popup-dismiss" onclick="dismissOrderPopup()">Dismiss</button>
+    </div>
+  </div>
+  <button class="order-popup-close" onclick="dismissOrderPopup()">✕</button>
 </div>
 
 <!-- ═══ MODALS ════════════════════════════════════════════════════ -->
@@ -433,7 +537,6 @@
         <div class="fld"><label>Price (₹) *</label><input type="number" id="prodPrice" placeholder="e.g. 2999"/></div>
         <div class="fld"><label>Stock Qty *</label><input type="number" id="prodStock" placeholder="e.g. 10"/></div>
       </div>
-      <!-- Image: URL or upload -->
       <div class="fld">
         <label>Product Image</label>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -448,7 +551,6 @@
       </div>
       <div id="prodImgPreview" style="display:none;margin-top:4px;"><img id="prodImgPreviewImg" style="width:100%;height:140px;object-fit:cover;border-radius:8px;"/></div>
       <div class="fld"><label>Available Sizes (comma-separated)</label><input type="text" id="prodSizes" placeholder="XS,S,M,L,XL"/></div>
-      <!-- Featured toggle -->
       <div class="fld" style="display:flex;align-items:center;gap:10px;">
         <input type="checkbox" id="prodFeatured" style="width:18px;height:18px;accent-color:#0d0d0d;"/>
         <label style="margin:0;font-weight:600;">⭐ Mark as Featured <span style="font-size:.75rem;color:var(--muted);font-weight:400;">(shown in store Featured section)</span></label>
@@ -463,13 +565,16 @@
 
 <!-- Order Detail Modal -->
 <div class="modal-backdrop" id="orderDetailModal">
-  <div class="modal-panel" style="max-width:600px;">
+  <div class="modal-panel" style="max-width:640px;">
     <div class="modal-head">
       <h3>📋 Order Details</h3>
-      <button onclick="closeModal('orderDetailModal')" style="font-size:1.4rem;">✕</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm no-print" style="background:#e0f2fe;color:#0369a1;font-weight:700;" onclick="printInvoice()">🖨 Print Invoice</button>
+        <button onclick="closeModal('orderDetailModal')" style="font-size:1.4rem;">✕</button>
+      </div>
     </div>
     <div class="modal-body" id="orderDetailBody"></div>
-    <div class="modal-foot">
+    <div class="modal-foot no-print">
       <div style="display:flex;gap:8px;align-items:center;flex:1;">
         <label style="font-size:.85rem;font-weight:600;">Update Status:</label>
         <select id="orderDetailStatusSel" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:.85rem;flex:1;"></select>
@@ -523,7 +628,7 @@
         <div class="fld"><label>Max Uses</label>
           <input type="number" id="cpnMaxUses" min="0" placeholder="0 = unlimited" value="0"/>
         </div>
-        <div class="fld"><label>Expiry Date *</label>
+        <div class="fld"><label>Expiry Date</label>
           <input type="date" id="cpnExpiry"/>
         </div>
         <div class="fld" style="grid-column:1/-1"><label>Description *</label>
@@ -534,7 +639,6 @@
           <label style="margin:0;font-weight:600;">Active (customers can use this coupon)</label>
         </div>
       </div>
-      <!-- Live preview -->
       <div id="couponPreview" style="margin-top:14px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:12px 16px;font-size:.88rem;display:none;">
         <strong>Preview:</strong> <span id="couponPreviewText"></span>
       </div>
@@ -549,7 +653,7 @@
 <!-- Toast -->
 <div class="toast" id="adminToast"></div>
 
-<script src="../store/js/data.js?v=5"></script>
-<script src="js/admin.js?v=5"></script>
+<script src="../store/js/data.js?v=6"></script>
+<script src="js/admin.js?v=6"></script>
 </body>
 </html>

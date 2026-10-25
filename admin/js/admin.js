@@ -32,9 +32,243 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initAdmin() {
   document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  // Only render the active panel (dashboard) on init — all others render lazily on switchPanel
   renderDashboard();
   updateOrderNotifBadge();
+  initTopbar();
+  startOrderPolling();
+  renderNotifDropdown();
+  renderStoreStatusToggle();
+}
+
+// ── Topbar ───────────────────────────────────────────────────────
+function initTopbar() {
+  // Live clock
+  function tick() {
+    const el = document.getElementById('topbarClock');
+    if (el) el.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 1000);
+  // Time-based greeting
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  const el = document.getElementById('topbarGreeting');
+  if (el) el.textContent = greet + ', Admin 👋';
+}
+
+// ── Store open/close toggle ──────────────────────────────────────
+function renderStoreStatusToggle() {
+  const db = getDB();
+  const isOpen = db.settings?.storeOpen !== false;
+  const toggle = document.getElementById('storeOpenToggle');
+  const chip   = document.getElementById('storeStatusChip');
+  if (toggle) toggle.checked = isOpen;
+  if (chip)   { chip.textContent = isOpen ? 'Open' : 'Closed'; chip.className = 'store-status-chip ' + (isOpen ? 'open' : 'closed'); }
+}
+
+function toggleStoreStatus(isOpen) {
+  updateDB(db => { if (!db.settings) db.settings = {}; db.settings.storeOpen = isOpen; });
+  renderStoreStatusToggle();
+  pushNotification({ type: 'system', icon: isOpen ? '🟢' : '🔴', title: 'Store status changed', body: isOpen ? 'Store is now OPEN for orders.' : 'Store is now CLOSED — orders paused.', time: new Date().toISOString() });
+  showAdminToast(isOpen ? '🟢 Store is now Open' : '🔴 Store is now Closed');
+}
+
+// ── Notification System ──────────────────────────────────────────
+const NOTIF_KEY = 'ba_admin_notifications';
+
+function getNotifications() {
+  try { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); } catch { return []; }
+}
+
+function saveNotifications(list) {
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(list));
+}
+
+function pushNotification(notif) {
+  const list = getNotifications();
+  notif.id = 'n' + Date.now();
+  notif.read = false;
+  list.unshift(notif);
+  // Keep max 100
+  saveNotifications(list.slice(0, 100));
+  updateBellDot();
+  renderNotifDropdown();
+}
+
+function updateBellDot() {
+  const list = getNotifications();
+  const unread = list.filter(n => !n.read).length;
+  const dot = document.getElementById('bellDot');
+  if (dot) { dot.className = 'bell-dot' + (unread > 0 ? ' active' : ''); }
+  // Also update sidebar order badge
+  updateOrderNotifBadge();
+}
+
+function renderNotifDropdown() {
+  const body = document.getElementById('notifDdBody');
+  if (!body) return;
+  const list = getNotifications().slice(0, 20);
+  if (!list.length) {
+    body.innerHTML = '<div class="notif-dd-empty">🎉 No notifications yet.<br/>New orders will appear here.</div>';
+    return;
+  }
+  body.innerHTML = list.map(n => `
+    <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead('${n.id}');${n.type==='order'?`openOrderDetail('${n.orderId}');closeNotifDropdown()`:''}" >
+      <div class="notif-icon">${n.icon || '🔔'}</div>
+      <div class="notif-content">
+        <p>${n.title}</p>
+        <span>${n.body} &nbsp;·&nbsp; ${timeAgo(n.time)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function markNotifRead(id) {
+  const list = getNotifications();
+  const n = list.find(x => x.id === id);
+  if (n) { n.read = true; saveNotifications(list); }
+  updateBellDot();
+  renderNotifDropdown();
+}
+
+function markAllNotifRead() {
+  const list = getNotifications();
+  list.forEach(n => n.read = true);
+  saveNotifications(list);
+  updateBellDot();
+  renderNotifDropdown();
+  renderNotificationsPanel('all');
+  showAdminToast('✅ All notifications marked as read.');
+}
+
+function clearAllNotif() {
+  saveNotifications([]);
+  updateBellDot();
+  renderNotifDropdown();
+  renderNotificationsPanel('all');
+  showAdminToast('🗑 Notifications cleared.');
+}
+
+function toggleNotifDropdown() {
+  const dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) renderNotifDropdown();
+}
+
+function closeNotifDropdown() {
+  const dd = document.getElementById('notifDropdown');
+  if (dd) dd.classList.remove('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const bell = document.getElementById('bellBtn');
+  const dd   = document.getElementById('notifDropdown');
+  if (dd && dd.classList.contains('open') && !dd.contains(e.target) && e.target !== bell && !bell.contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
+
+// ── Notifications panel ──────────────────────────────────────────
+function renderNotificationsPanel(filter, btnEl) {
+  if (!filter) filter = 'all';
+  // Update tab buttons
+  document.querySelectorAll('#notifFilterTabs button').forEach(b => {
+    b.className = (b.dataset.filter === filter) ? 'btn btn-primary btn-sm' : 'btn btn-sm';
+    b.style.background = (b.dataset.filter === filter) ? '' : 'var(--surface)';
+  });
+  const body = document.getElementById('notifPanelBody');
+  if (!body) return;
+  let list = getNotifications();
+  if (filter !== 'all') list = list.filter(n => n.type === filter);
+  if (!list.length) {
+    body.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--muted);font-size:.92rem;">No notifications in this category.</div>';
+    return;
+  }
+  body.innerHTML = list.map(n => `
+    <div class="card" style="margin-bottom:10px;border-left:4px solid ${n.read?'var(--border)':n.type==='order'?'var(--blue)':n.type==='stock'?'var(--orange)':'var(--green)'};">
+      <div class="card-body" style="padding:14px 18px;display:flex;align-items:flex-start;gap:14px;">
+        <div style="font-size:1.5rem;flex-shrink:0;">${n.icon||'🔔'}</div>
+        <div style="flex:1;">
+          <div style="font-size:.9rem;font-weight:${n.read?'500':'700'};margin-bottom:3px;">${n.title}</div>
+          <div style="font-size:.83rem;color:var(--muted);">${n.body}</div>
+          <div style="font-size:.76rem;color:var(--muted);margin-top:4px;">🕐 ${new Date(n.time).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          ${!n.read ? `<button onclick="markNotifRead('${n.id}');renderNotificationsPanel('${filter}')" class="btn btn-sm btn-success" style="font-size:.75rem;">Mark Read</button>` : ''}
+          ${n.type==='order'&&n.orderId ? `<button onclick="openOrderDetail('${n.orderId}')" class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;font-size:.75rem;">View Order</button>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Order polling for real-time new order detection ──────────────
+let _lastKnownOrderCount = -1;
+let _lastPopupOrderId = null;
+
+function startOrderPolling() {
+  const db = getDB();
+  _lastKnownOrderCount = db.orders.length;
+  setInterval(checkForNewOrders, 10000); // check every 10s
+}
+
+function checkForNewOrders() {
+  const db = getDB();
+  const current = db.orders.length;
+  if (_lastKnownOrderCount >= 0 && current > _lastKnownOrderCount) {
+    const newOrders = [...db.orders].reverse().slice(0, current - _lastKnownOrderCount);
+    newOrders.forEach(o => {
+      pushNotification({
+        type: 'order', icon: '🛍️',
+        title: '🛍️ New Order Received!',
+        body: `${o.customer?.name||'Guest'} placed an order for ${formatPrice(o.total)}`,
+        time: o.date,
+        orderId: o.id,
+        read: false
+      });
+      showOrderPopup(o);
+    });
+  }
+  _lastKnownOrderCount = current;
+  updateOrderNotifBadge();
+}
+
+// ── New order popup ──────────────────────────────────────────────
+let _popupTimer = null;
+
+function showOrderPopup(order) {
+  const popup = document.getElementById('orderPopup');
+  const title = document.getElementById('orderPopupTitle');
+  const sub   = document.getElementById('orderPopupSub');
+  const viewBtn = document.getElementById('orderPopupViewBtn');
+  if (!popup) return;
+  if (title) title.textContent = '🛍️ New Order from ' + (order.customer?.name || 'Customer') + '!';
+  if (sub) sub.textContent = formatPrice(order.total) + ' · ' + (order.items?.length || 0) + ' item(s)';
+  if (viewBtn) viewBtn.onclick = () => {
+    openOrderDetail(order.id);
+    dismissOrderPopup();
+    switchPanel('orders', document.querySelector('[data-panel=orders]'));
+  };
+  popup.classList.add('show');
+  clearTimeout(_popupTimer);
+  _popupTimer = setTimeout(dismissOrderPopup, 8000);
+}
+
+function dismissOrderPopup() {
+  const popup = document.getElementById('orderPopup');
+  if (popup) popup.classList.remove('show');
+  clearTimeout(_popupTimer);
+}
+
+// ── Time ago helper ──────────────────────────────────────────────
+function timeAgo(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
 }
 
 // ── Order notification badge ─────────────────────────────────────
@@ -63,7 +297,7 @@ function switchPanel(name, el) {
   document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  el.classList.add('active');
+  if (el) el.classList.add('active');
   // Refresh data on switch
   if (name === 'dashboard') renderDashboard();
   if (name === 'analytics') renderAnalytics();
@@ -73,6 +307,7 @@ function switchPanel(name, el) {
   if (name === 'orders') { markOrdersAsSeen(); renderOrdersTable(); }
   if (name === 'customers') renderCustomers();
   if (name === 'coupons')  renderCoupons();
+  if (name === 'notifications') renderNotificationsPanel('all');
   if (name === 'settings') renderSettings();
 }
 
@@ -84,6 +319,14 @@ function renderDashboard() {
   const outOfStock = db.products.filter(p => p.stock === 0).length;
   const totalOrders = db.orders.length;
   const revenue = db.orders.reduce((s, o) => s + (o.total || 0), 0);
+
+  // Today vs yesterday
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
+  const todayOrders = db.orders.filter(o => new Date(o.date) >= todayStart);
+  const yestOrders  = db.orders.filter(o => new Date(o.date) >= yesterdayStart && new Date(o.date) < todayStart);
+  const todayRev  = todayOrders.reduce((s,o) => s + (o.total||0), 0);
+  const yestRev   = yestOrders.reduce((s,o) => s + (o.total||0), 0);
 
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-card">
@@ -104,18 +347,33 @@ function renderDashboard() {
     </div>
   `;
 
+  // Revenue sparkline (last 7 days)
+  renderRevSparkline(db);
+
+  // Today vs yesterday comparison
+  const tvyEl = document.getElementById('todayVsYesterday');
+  if (tvyEl) {
+    const diff = todayRev - yestRev;
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '→';
+    const color = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#888';
+    tvyEl.innerHTML = `Today: <strong>${formatPrice(todayRev)}</strong> &nbsp;
+      <span style="color:${color};font-weight:700;">${arrow} ${diff >= 0 ? '+' : ''}${formatPrice(Math.abs(diff))}</span>
+      <span style="color:#aaa;font-size:.76rem;"> vs yesterday (${formatPrice(yestRev)})</span>`;
+  }
+
   // Recent orders
   const recent = [...db.orders].reverse().slice(0, 5);
   const recentDiv = document.getElementById('recentOrdersList');
   if (!recent.length) {
     recentDiv.innerHTML = '<p style="color:#888;font-size:.88rem;padding:8px 0;">No orders yet.</p>';
   } else {
-    recentDiv.innerHTML = `<table><thead><tr><th>ID</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead><tbody>
+    recentDiv.innerHTML = `<table><thead><tr><th>ID</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
       ${recent.map(o => `<tr>
         <td><code style="font-size:.75rem;">${o.id.slice(-8)}</code></td>
         <td>${o.customer?.name || '—'}</td>
         <td>${formatPrice(o.total)}</td>
-        <td><span class="badge badge-green">${o.status}</span></td>
+        <td><span class="badge ${STATUS_COLORS[o.status]||'badge-blue'}">${o.status}</span></td>
+        <td><button onclick="openOrderDetail('${o.id}')" style="font-size:.75rem;color:#2563eb;text-decoration:underline;background:none;border:none;cursor:pointer;">View</button></td>
       </tr>`).join('')}
     </tbody></table>`;
   }
@@ -137,6 +395,51 @@ function renderDashboard() {
 
   // Low stock banner on dashboard
   renderLowStockBanner('dashLowStockBanner', db);
+
+  // Push low-stock notifications if needed (once per session)
+  if (!sessionStorage.getItem('ba_stock_notif_pushed')) {
+    const oos = db.products.filter(p => p.stock === 0);
+    const low = db.products.filter(p => p.stock > 0 && p.stock <= 3);
+    if (oos.length) pushNotification({ type:'stock', icon:'🔴', title:`${oos.length} product(s) out of stock`, body: oos.map(p=>p.name).join(', '), time: new Date().toISOString() });
+    if (low.length) pushNotification({ type:'stock', icon:'🟡', title:`${low.length} product(s) running low`, body: low.map(p=>`${p.name} (${p.stock} left)`).join(', '), time: new Date().toISOString() });
+    sessionStorage.setItem('ba_stock_notif_pushed', '1');
+  }
+}
+
+// ── Revenue Sparkline (7 days) ────────────────────────────────────
+function renderRevSparkline(db) {
+  const el = document.getElementById('revSparkline');
+  if (!el) return;
+  const days = [];
+  const labels = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i);
+    const nextD = new Date(d); nextD.setDate(nextD.getDate() + 1);
+    const dayRev = db.orders.filter(o => { const t = new Date(o.date); return t >= d && t < nextD; })
+                            .reduce((s,o) => s + (o.total||0), 0);
+    days.push(dayRev);
+    labels.push(d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }));
+  }
+  const max = Math.max(...days, 1);
+  const barHtml = days.map((rev, i) => {
+    const pct = Math.round((rev / max) * 100);
+    const isToday = i === 6;
+    const tip = `${labels[i]}: ${formatPrice(rev)}`;
+    return `<div class="bar${isToday?' today':''}" style="height:${Math.max(4, pct)}%;" title="${tip}"></div>`;
+  }).join('');
+
+  const totalWeek = days.reduce((s,v) => s+v, 0);
+  el.innerHTML = `
+    <div style="display:flex;align-items:flex-end;gap:20px;">
+      <div class="sparkline-bar" style="flex:1;">${barHtml}</div>
+      <div style="text-align:right;min-width:120px;">
+        <div style="font-size:1.3rem;font-weight:800;">${formatPrice(totalWeek)}</div>
+        <div style="font-size:.78rem;color:var(--muted);">This week's revenue</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:0;margin-top:4px;">
+      ${labels.map((l,i) => `<div style="flex:1;font-size:.62rem;color:var(--muted);text-align:center;overflow:hidden;white-space:nowrap;${i===6?'font-weight:700;color:var(--text);':''}">${l}</div>`).join('')}
+    </div>`;
 }
 
 // ── Collections ──────────────────────────────────────────────────
@@ -555,23 +858,31 @@ function renderOrdersTable() {
   const countEl = document.getElementById('orderCount');
   if (countEl) countEl.textContent = orders.length + ' order(s)';
 
+  // Uncheck select-all
+  const selectAll = document.getElementById('selectAllOrders');
+  if (selectAll) selectAll.checked = false;
+  _selectedOrders = [];
+  updateBulkBar();
+
   const body = document.getElementById('ordersTableBody');
   if (!orders.length) {
-    body.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">${filterVal==='all'?'No orders yet. Share the store link!':'No orders with status: '+filterVal}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#888;padding:20px;">${filterVal==='all'?'No orders yet. Share the store link!':'No orders with status: '+filterVal}</td></tr>`;
     return;
   }
   body.innerHTML = orders.map(o => {
     const payLabel = { upi:'📱 UPI', cod:'💵 COD', net:'💳 Card', card:'💳 Card' };
     const statusOpts = ORDER_STATUSES.map(s =>
       `<option value="${s}" ${o.status===s?'selected':''}>${STATUS_ICONS[s]} ${s}</option>`).join('');
+    const hasNote = o.adminNote ? '📝' : '';
     return `
-    <tr>
+    <tr id="orow_${o.id}">
+      <td><input type="checkbox" class="order-cb" value="${o.id}" onchange="onOrderCheckbox(this)" style="accent-color:#0d0d0d;"/></td>
       <td><code style="font-size:.75rem;cursor:pointer;color:#2563eb;text-decoration:underline;" onclick="openOrderDetail('${o.id}')">${o.id.slice(-10)}</code></td>
       <td><strong>${o.customer?.name||'—'}</strong><br/><span style="font-size:.74rem;color:#888;">${o.customer?.phone||''}</span></td>
       <td style="font-size:.8rem;">${new Date(o.date).toLocaleDateString('en-IN')}</td>
       <td style="font-size:.83rem;">${o.items?.length||0} item(s)</td>
       <td style="font-size:.82rem;">${payLabel[o.customer?.payment||o.customer?.paymentMethod]||'—'}</td>
-      <td><strong>${formatPrice(o.total)}</strong></td>
+      <td><strong>${formatPrice(o.total)}</strong>${hasNote?` <span title="Has admin note" style="font-size:.8rem;">📝</span>`:''}</td>
       <td><span class="badge ${STATUS_COLORS[o.status]||'badge-blue'}">${STATUS_ICONS[o.status]||''} ${o.status}</span></td>
       <td>
         <div style="display:flex;gap:6px;align-items:center;">
@@ -583,6 +894,62 @@ function renderOrdersTable() {
       </td>
     </tr>`;
   }).join('');
+}
+
+// ── Bulk order management ────────────────────────────────────────
+let _selectedOrders = [];
+
+function onOrderCheckbox(cb) {
+  const id = cb.value;
+  if (cb.checked) { if (!_selectedOrders.includes(id)) _selectedOrders.push(id); }
+  else { _selectedOrders = _selectedOrders.filter(x => x !== id); }
+  updateBulkBar();
+}
+
+function toggleSelectAllOrders(checked) {
+  _selectedOrders = [];
+  document.querySelectorAll('.order-cb').forEach(cb => {
+    cb.checked = checked;
+    if (checked) _selectedOrders.push(cb.value);
+  });
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const lbl = document.getElementById('bulkCountLabel');
+  if (!bar) return;
+  if (_selectedOrders.length > 0) {
+    bar.classList.add('show');
+    if (lbl) lbl.textContent = _selectedOrders.length + ' order(s) selected';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+function applyBulkStatus() {
+  const sel = document.getElementById('bulkStatusSel');
+  const status = sel ? sel.value : '';
+  if (!status) { showAdminToast('❌ Select a status first.', true); return; }
+  if (!_selectedOrders.length) { showAdminToast('❌ No orders selected.', true); return; }
+  updateDB(db => {
+    _selectedOrders.forEach(id => {
+      const o = db.orders.find(x => x.id === id);
+      if (o) o.status = status;
+    });
+  });
+  showAdminToast(`✅ ${_selectedOrders.length} order(s) updated to: ${status}`);
+  clearBulkSelection();
+  renderOrdersTable();
+  renderDashboard();
+}
+
+function clearBulkSelection() {
+  _selectedOrders = [];
+  document.querySelectorAll('.order-cb').forEach(cb => cb.checked = false);
+  const sel = document.getElementById('selectAllOrders');
+  if (sel) sel.checked = false;
+  updateBulkBar();
 }
 
 function updateOrderStatus(orderId, newStatus) {
@@ -680,6 +1047,13 @@ function openOrderDetail(orderId) {
         </tr></tfoot>
       </table>
     </div>
+
+    <!-- Admin Notes -->
+    <div class="order-notes-area no-print">
+      <label>🗒️ Admin Notes (internal, not visible to customer)</label>
+      <textarea id="orderNoteInput" placeholder="Add a private note about this order…">${o.adminNote||''}</textarea>
+      <button class="save-note-btn" onclick="saveOrderNote('${o.id}')">💾 Save Note</button>
+    </div>
   `;
 
   // Populate status selector in modal footer
@@ -690,11 +1064,24 @@ function openOrderDetail(orderId) {
   openModal('orderDetailModal');
 }
 
+function saveOrderNote(orderId) {
+  const note = document.getElementById('orderNoteInput')?.value.trim() || '';
+  updateDB(db => {
+    const o = db.orders.find(x => x.id === orderId);
+    if (o) o.adminNote = note;
+  });
+  renderOrdersTable();
+  showAdminToast(note ? '📝 Note saved!' : '📝 Note cleared.');
+}
+
+function printInvoice() {
+  window.print();
+}
+
 function applyOrderDetailStatus() {
   if (!_currentDetailOrderId) return;
   const newStatus = document.getElementById('orderDetailStatusSel').value;
   updateOrderStatus(_currentDetailOrderId, newStatus);
-  // Update the status badge inside the open modal without closing it
   openOrderDetail(_currentDetailOrderId);
 }
 
@@ -1052,8 +1439,16 @@ function changePassword() {
 function confirmClearOrders() {
   showConfirm('Clear All Orders', 'This will permanently delete ALL orders. Are you sure?', () => {
     updateDB(db => { db.orders = []; });
+    _lastKnownOrderCount = 0;
     renderDashboard();
     showAdminToast('🗑 All orders cleared.');
+  });
+}
+
+function confirmClearNotifications() {
+  showConfirm('Clear All Notifications', 'Delete all notification history?', () => {
+    clearAllNotif();
+    showAdminToast('🗑 Notifications cleared.');
   });
 }
 
